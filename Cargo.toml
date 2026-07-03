@@ -5,9 +5,20 @@ edition = "2021"
 rust-version = "1.80"
 description = "A beautiful, modern, minimalistic network speed testing terminal application"
 license = "MIT"
-repository = "https://github.com/tarunvishwakarma1/netspd"
+repository = "https://github.com/TarunVishwakarma1/netspd"
+readme = "README.md"
 keywords = ["speedtest", "network", "tui", "terminal", "bandwidth"]
 categories = ["command-line-utilities", "network-programming"]
+# Keep the crates.io package lean: the demo GIF and CI config are
+# repository-only artifacts. Theme TOMLs must stay in: they are embedded
+# via include_str!.
+exclude = [
+    "/assets/recording.gif",
+    "/assets/icons",
+    "/.github",
+    "/docs",
+    "/config",
+]
 
 [dependencies]
 anyhow = "1"

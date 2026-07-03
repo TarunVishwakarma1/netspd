@@ -1,55 +1,42 @@
+<div align="center">
+
 # netspd
 
-A beautiful, modern, minimalistic network speed testing terminal application, written entirely in Rust.
+**A beautiful, modern network speed test for your terminal — with a hypercar tachometer.**
 
-netspd measures **ping, jitter, download and upload** against LibreSpeed-compatible servers and renders them live in a smooth, themeable TUI — in the spirit of tools like `btop`, `gitui` and `lazygit`.
+[![CI](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml/badge.svg)](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.80%2B-orange.svg)](Cargo.toml)
 
-```
-  netspd  v0.1.0                                LibreSpeed · Frankfurt, Germany
+<img src="https://raw.githubusercontent.com/TarunVishwakarma1/netspd/main/assets/recording.gif" alt="netspd running a speed test with an animated tachometer dial" width="800">
 
-    ⠹ Download            Frankfurt, Germany                00:07  eta 4s
+</div>
 
-                                DOWNLOAD
-
-                     ▄█ ▄▀▀▄ ▄▀▀▄   █▀▀▀
-                      █  █  █ ▄▄▀   ▀▀▀▄  Mbps
-                     ▄█▄ ▀▄▄▀ █▄▄▄  ▄▄▄▀
-                        ▂▃▅▆▇█▇▆▇█▇▇▆▇█
-
-           ██████████████████████████▌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-
-   ╭ ⇄ Ping ─────────╮  ╭ ↓ Download ──────╮  ╭ ↑ Upload ────────╮
-   │ 12.4 ms          │  │ 142.5 Mbps       │  │ —                │
-   │ jitter  1.2 ms   │  │ avg   138.1 Mbps │  │ avg   —          │
-   │ range   11 – 15  │  │ peak  151.0 Mbps │  │ peak  —          │
-   │ loss    0%       │  │ data  171.2 MB   │  │ data  —          │
-   ╰──────────────────╯  ╰──────────────────╯  ╰──────────────────╯
-
-              q quit · r restart · s servers · t theme · ? help
-```
-
-> Screenshots coming soon.
+netspd measures **ping, jitter, download and upload** against LibreSpeed-compatible servers and renders them live on a braille-canvas instrument cluster: a spring-loaded needle with an ignition sweep, a heat-gradient band that reddens toward the hatched redline, a session-peak ghost notch, and a latency sub-dial — in the spirit of tools like `btop`, `gitui` and `lazygit`.
 
 ## Features
 
-- **Hypercar tachometer** — braille-canvas dial with a heat-gradient band, hatched redline, spring-loaded needle with afterglow, ignition sweep on phase start, session-peak ghost notch and a latency sub-dial; twin instrument cluster on wide terminals
-- **Live metrics** — current, average and peak speed, transferred bytes, ETA, elapsed time
+- **Hypercar tachometer** — heat-gradient value band, hatched redline, spring-physics needle with afterglow, ignition sweep before each phase, peak ghost notch, latency sub-dial; twin instrument cluster on wide terminals
+- **Live metrics** — current / average / peak speed, transferred bytes, ETA, elapsed time
 - **Latency analysis** — multiple samples, outlier trimming, jitter, packet-loss ready
-- **Streaming transfers** — nothing is buffered in memory; parallel connections with EMA smoothing
+- **Smart server discovery** — health-probes the public server list, drops dead servers, auto-selects the nearest
 - **Headless mode** — `--no-tui` for scripts and cron, `--json` for machine-readable reports
 - **Result history** — every run appended as JSON lines to your data directory
-- **Provider architecture** — LibreSpeed today; Ookla, Fast.com or self-hosted backends are one trait away
+- **Streaming transfers** — nothing buffered in memory; parallel connections with EMA smoothing
 - **Themes** — Default, Nord, Dracula, Catppuccin, Gruvbox, plus your own TOML themes without recompiling
 - **Responsive layout** — adapts from 80×24 up to 4K terminals
-- **Smooth animation** — spring-physics needles, interpolated counters, gradient progress bars, braille spinners, capped at 60 FPS
 - **Graceful everywhere** — cancellation, retries, timeouts; network failures never panic
 
 ## Installation
 
+### Prebuilt binaries
+
+Download the archive for your platform from the [latest release](https://github.com/TarunVishwakarma1/netspd/releases/latest), unpack it and put `netspd` on your `PATH`.
+
 ### From source
 
 ```sh
-git clone https://github.com/tarunvishwakarma/netspd
+git clone https://github.com/TarunVishwakarma1/netspd
 cd netspd
 cargo install --path .
 ```
@@ -64,11 +51,7 @@ netspd --no-tui   # headless: progress on stderr, summary on stdout
 netspd --json     # headless: report as one JSON object on stdout
 ```
 
-The test starts automatically: ping → download → upload, then a results summary. Every completed run is appended to `<data dir>/netspd/history.jsonl` (macOS: `~/Library/Application Support/netspd/`), one JSON object per line:
-
-```sh
-netspd --json | jq .download_mbps
-```
+The test starts automatically: ping → download → upload, then a results summary.
 
 ### Keyboard
 
@@ -81,6 +64,32 @@ netspd --json | jq .download_mbps
 | `c` | View configuration |
 | `?` | Help |
 | `↑↓` / `jk`, `Enter` | Navigate and confirm in lists |
+
+### Scripting
+
+`--json` prints exactly one JSON object on stdout and nothing else, so it pipes cleanly:
+
+```sh
+netspd --json | jq .download_mbps
+```
+
+```json
+{
+  "timestamp": 1783092092,
+  "server": "Tokyo, Japan (A573)",
+  "ping_ms": 141.2,
+  "jitter_ms": 1.0,
+  "packet_loss_pct": 0.0,
+  "download_mbps": 93.7,
+  "download_peak_mbps": 171.0,
+  "download_bytes": 117193129,
+  "upload_mbps": 66.3,
+  "upload_peak_mbps": 87.8,
+  "upload_bytes": 82837504
+}
+```
+
+Exit code is `0` on a completed test and `1` on any failure. Every completed run (TUI or headless) is also appended to `<data dir>/netspd/history.jsonl` (macOS: `~/Library/Application Support/netspd/`, Linux: `~/.local/share/netspd/`), one JSON object per line.
 
 ## Configuration
 
@@ -143,23 +152,17 @@ cargo clippy          # lint-clean, unwrap/expect/panic denied
 cargo fmt --check
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
+
 ## Roadmap
 
 - [x] JSON result export and `--no-tui` CLI mode
 - [x] Result history (JSON lines)
 - [ ] Trend sparklines over the stored history
+- [ ] `--server` selection and richer CLI flags
 - [ ] Packet loss via ICMP (the reporting model is already in place)
 - [ ] Ookla and Fast.com providers
 - [ ] Scheduled repeat testing
-
-## Contributing
-
-Contributions are welcome!
-
-1. Fork and create a feature branch.
-2. Keep the layering rules: engine code never imports UI code.
-3. Add tests for new behavior; `cargo test`, `cargo clippy` and `cargo fmt --check` must pass.
-4. Open a pull request with a clear description.
 
 ## License
 
