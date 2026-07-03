@@ -176,6 +176,8 @@ pub struct AppState {
     pub settings: Settings,
     /// Display name of the active provider.
     pub provider_name: &'static str,
+    /// The client's public IP and ISP, once discovered.
+    pub client_info: Option<String>,
     /// Set when the visible content changed and a redraw is required.
     dirty: bool,
 }
@@ -211,6 +213,7 @@ impl AppState {
             splash_since: Instant::now(),
             settings,
             provider_name,
+            client_info: None,
             dirty: true,
         }
     }

@@ -21,4 +21,6 @@ pub enum AppEvent {
     Engine(EngineEvent),
     /// Background server discovery finished.
     ServersLoaded(Result<Vec<Server>, String>),
+    /// The client's public IP/ISP was discovered.
+    ClientInfo(String),
 }

@@ -5,6 +5,8 @@
 //! every widget previewable and testable in isolation.
 
 pub mod completion;
+pub mod dial_gauge;
+pub mod digits;
 pub mod download_card;
 pub mod error_popup;
 pub mod footer;

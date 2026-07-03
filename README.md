@@ -32,13 +32,16 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 
 ## Features
 
+- **Hypercar tachometer** — braille-canvas dial with a heat-gradient band, hatched redline, spring-loaded needle with afterglow, ignition sweep on phase start, session-peak ghost notch and a latency sub-dial; twin instrument cluster on wide terminals
 - **Live metrics** — current, average and peak speed, transferred bytes, ETA, elapsed time
 - **Latency analysis** — multiple samples, outlier trimming, jitter, packet-loss ready
 - **Streaming transfers** — nothing is buffered in memory; parallel connections with EMA smoothing
+- **Headless mode** — `--no-tui` for scripts and cron, `--json` for machine-readable reports
+- **Result history** — every run appended as JSON lines to your data directory
 - **Provider architecture** — LibreSpeed today; Ookla, Fast.com or self-hosted backends are one trait away
 - **Themes** — Default, Nord, Dracula, Catppuccin, Gruvbox, plus your own TOML themes without recompiling
 - **Responsive layout** — adapts from 80×24 up to 4K terminals
-- **Smooth animation** — interpolated counters, gradient progress bars, braille spinners, capped at 60 FPS
+- **Smooth animation** — spring-physics needles, interpolated counters, gradient progress bars, braille spinners, capped at 60 FPS
 - **Graceful everywhere** — cancellation, retries, timeouts; network failures never panic
 
 ## Installation
@@ -56,10 +59,16 @@ Requires Rust 1.80 or newer.
 ## Usage
 
 ```sh
-netspd
+netspd            # full TUI
+netspd --no-tui   # headless: progress on stderr, summary on stdout
+netspd --json     # headless: report as one JSON object on stdout
 ```
 
-The test starts automatically: ping → download → upload, then a results summary.
+The test starts automatically: ping → download → upload, then a results summary. Every completed run is appended to `<data dir>/netspd/history.jsonl` (macOS: `~/Library/Application Support/netspd/`), one JSON object per line:
+
+```sh
+netspd --json | jq .download_mbps
+```
 
 ### Keyboard
 
@@ -136,10 +145,11 @@ cargo fmt --check
 
 ## Roadmap
 
+- [x] JSON result export and `--no-tui` CLI mode
+- [x] Result history (JSON lines)
+- [ ] Trend sparklines over the stored history
 - [ ] Packet loss via ICMP (the reporting model is already in place)
 - [ ] Ookla and Fast.com providers
-- [ ] JSON / CSV result export and `--no-tui` CLI mode
-- [ ] Result history with trend sparklines
 - [ ] Scheduled repeat testing
 
 ## Contributing

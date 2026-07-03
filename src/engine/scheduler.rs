@@ -42,6 +42,7 @@ pub(crate) async fn run_sequence(
         },
     )
     .await?;
+    lead_in(config, cancel).await?;
     let download_stats = download::run_download(
         client,
         &server.endpoints.download,
@@ -66,6 +67,7 @@ pub(crate) async fn run_sequence(
         },
     )
     .await?;
+    lead_in(config, cancel).await?;
     let upload_stats = upload::run_upload(
         client,
         &server.endpoints.upload,
@@ -89,4 +91,17 @@ pub(crate) async fn run_sequence(
         download: download_stats,
         upload: upload_stats,
     })
+}
+
+/// Waits out the configured lead-in between a phase announcement and its
+/// first byte, so front ends can play phase transitions against a still
+/// needle. Cancellation is honored during the wait.
+async fn lead_in(config: &EngineConfig, cancel: &CancellationToken) -> EngineResult<()> {
+    if config.transfer.lead_in.is_zero() {
+        return Ok(());
+    }
+    tokio::select! {
+        () = cancel.cancelled() => Err(crate::errors::EngineError::Cancelled),
+        () = tokio::time::sleep(config.transfer.lead_in) => Ok(()),
+    }
 }

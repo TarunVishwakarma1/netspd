@@ -50,6 +50,12 @@ pub struct TransferConfig {
     pub upload_chunk_bytes: usize,
     /// Connection timeout for the shared HTTP client.
     pub connect_timeout: Duration,
+    /// Pause between announcing a transfer phase and moving data.
+    ///
+    /// Front ends use this window for phase transitions (the TUI plays
+    /// its ignition sweep in it); the pause is not part of the
+    /// measurement.
+    pub lead_in: Duration,
 }
 
 impl Default for TransferConfig {
@@ -61,6 +67,7 @@ impl Default for TransferConfig {
             ema_alpha: 0.2,
             upload_chunk_bytes: 512 * 1024,
             connect_timeout: Duration::from_secs(15),
+            lead_in: Duration::from_millis(1200),
         }
     }
 }
@@ -122,6 +129,14 @@ impl Engine {
             return Err(EngineError::NoServers);
         }
         Ok(reachable)
+    }
+
+    /// Fetches the client's public IP and ISP through `server`.
+    ///
+    /// Best-effort: failures return `None` rather than an error, because
+    /// this information is purely cosmetic.
+    pub async fn client_info(&self, server: &Server) -> Option<String> {
+        super::network::info::fetch_client_info(&self.client, &server.endpoints.ping).await
     }
 
     /// Runs a complete test against `server`, streaming progress on

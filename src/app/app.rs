@@ -17,6 +17,7 @@ use crate::tui::terminal::Tui;
 use super::action::Command;
 use super::controller;
 use super::event::AppEvent;
+use super::history;
 use super::state::{AppState, Screen};
 
 /// Minimum time the splash screen stays visible, so startup never flashes.
@@ -54,6 +55,7 @@ impl App {
     /// Runs the event loop until quit, drawing at most one frame per tick.
     pub async fn run(mut self, tui: &mut Tui) -> Result<()> {
         let mut servers_rx = Some(self.spawn_discovery());
+        let mut info_rx: Option<mpsc::Receiver<String>> = None;
         let mut input = EventStream::new();
         let mut ticker = tokio::time::interval(self.tick_rate);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -88,6 +90,13 @@ impl App {
                         continue;
                     }
                 },
+                maybe = recv_or_pending(&mut info_rx) => match maybe {
+                    Some(info) => AppEvent::ClientInfo(info),
+                    None => {
+                        info_rx = None;
+                        continue;
+                    }
+                },
             };
 
             match event {
@@ -102,8 +111,23 @@ impl App {
                     }
                 }
                 AppEvent::Resize => self.state.request_redraw(),
-                AppEvent::Engine(engine_event) => self.state.apply_engine_event(engine_event),
-                AppEvent::ServersLoaded(result) => self.state.apply_servers(result),
+                AppEvent::Engine(engine_event) => {
+                    if let EngineEvent::Finished { report } = &engine_event {
+                        // Best-effort persistence; the UI never blocks on it.
+                        history::record_report(report);
+                    }
+                    self.state.apply_engine_event(engine_event);
+                }
+                AppEvent::ServersLoaded(result) => {
+                    self.state.apply_servers(result);
+                    if info_rx.is_none() {
+                        info_rx = self.spawn_info_fetch();
+                    }
+                }
+                AppEvent::ClientInfo(info) => {
+                    self.state.client_info = Some(info);
+                    self.state.request_redraw();
+                }
                 AppEvent::Tick => {
                     self.state.on_tick();
                     self.maybe_leave_splash();
@@ -129,6 +153,20 @@ impl App {
             let _ = tx.send(result).await;
         });
         rx
+    }
+
+    /// Fetches the client's IP/ISP through the selected server, once
+    /// discovery has produced one.
+    fn spawn_info_fetch(&self) -> Option<mpsc::Receiver<String>> {
+        let server = self.state.current_server().cloned()?;
+        let (tx, rx) = mpsc::channel(1);
+        let engine = Arc::clone(&self.engine);
+        tokio::spawn(async move {
+            if let Some(info) = engine.client_info(&server).await {
+                let _ = tx.send(info).await;
+            }
+        });
+        Some(rx)
     }
 
     /// Automatically starts the first test once the splash has been shown

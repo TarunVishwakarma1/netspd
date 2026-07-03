@@ -63,6 +63,15 @@ fn full_config_parses() -> Result<(), toml::de::Error> {
 }
 
 #[test]
+fn ignition_sweep_matches_engine_lead_in() {
+    // The TUI sweep and the engine's transfer lead-in are the same
+    // wall-clock window; if they drift apart the needle fights live data.
+    let engine = Settings::default().engine_config();
+    let sweep = Duration::from_secs_f64(netspd::tui::renderer::SWEEP_SECONDS);
+    assert_eq!(engine.transfer.lead_in, sweep);
+}
+
+#[test]
 fn out_of_range_values_are_clamped() -> Result<(), toml::de::Error> {
     let source = r#"
         [engine]

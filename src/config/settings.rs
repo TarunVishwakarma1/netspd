@@ -141,6 +141,7 @@ impl Settings {
                 ema_alpha: defaults.transfer.ema_alpha,
                 upload_chunk_bytes: self.engine.upload_chunk_kb.clamp(64, 8192) * 1024,
                 connect_timeout: Duration::from_secs(self.engine.timeout_secs.clamp(2, 120)),
+                lead_in: defaults.transfer.lead_in,
             },
         }
     }

@@ -13,12 +13,16 @@ pub enum Breakpoint {
     Wide,
 }
 
-/// Classifies a terminal area into a [`Breakpoint`].
+/// Classifies a screen body area into a [`Breakpoint`].
+///
+/// Thresholds are body-relative: screens receive the frame minus the
+/// header and footer (4 rows), so a 100×30 terminal arrives here as
+/// 100×26.
 #[must_use]
 pub fn breakpoint(area: Rect) -> Breakpoint {
-    if area.width >= 120 && area.height >= 36 {
+    if area.width >= 120 && area.height >= 32 {
         Breakpoint::Wide
-    } else if area.width >= 96 && area.height >= 28 {
+    } else if area.width >= 96 && area.height >= 24 {
         Breakpoint::Normal
     } else {
         Breakpoint::Compact

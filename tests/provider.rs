@@ -1,6 +1,7 @@
 //! Tests for provider parsing and server URL normalization.
 
 use netspd::engine::models::Server;
+use netspd::engine::network::info::info_url;
 use netspd::engine::providers::{builtin_servers, parse_server_list};
 
 #[test]
@@ -72,6 +73,19 @@ fn builtin_servers_are_valid() {
         assert!(server.endpoints.download.contains("ckSize="));
         assert!(!server.name.is_empty());
     }
+}
+
+#[test]
+fn info_url_is_derived_from_ping_url() {
+    assert_eq!(
+        info_url("https://host.example.com/backend/empty.php"),
+        "https://host.example.com/backend/getIP.php?isp=true"
+    );
+    // Query strings on the ping URL do not leak into the info URL.
+    assert_eq!(
+        info_url("https://host.example.com/empty.php?r=1"),
+        "https://host.example.com/getIP.php?isp=true"
+    );
 }
 
 #[test]
