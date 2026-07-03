@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml/badge.svg)](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.80%2B-orange.svg)](Cargo.toml)
+[![Rust](https://img.shields.io/badge/rust-1.88%2B-orange.svg)](Cargo.toml)
 
 <img src="https://raw.githubusercontent.com/TarunVishwakarma1/netspd/main/assets/recording.gif" alt="netspd running a speed test with an animated tachometer dial" width="800">
 
@@ -41,7 +41,7 @@ cd netspd
 cargo install --path .
 ```
 
-Requires Rust 1.80 or newer.
+Requires Rust 1.88 or newer.
 
 ## Usage
 

@@ -12,7 +12,7 @@ cd netspd
 cargo run
 ```
 
-Rust 1.80+ is required. No other dependencies.
+Rust 1.88+ is required. No other dependencies.
 
 ## Quality gates
 
