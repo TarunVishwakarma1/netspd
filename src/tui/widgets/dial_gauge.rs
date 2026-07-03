@@ -84,12 +84,12 @@ pub fn nice_max_bps(peak_bps: f64) -> f64 {
     };
     let needed = peak_mbps * 1.02;
     let mut step = 100.0;
-    let mut index = 0;
+    let mut index = 0_usize;
     const PATTERN: [f64; 3] = [1.0, 2.5, 5.0];
     let mut decade = 100.0;
     while step < needed {
         index += 1;
-        decade *= if index % PATTERN.len() == 0 {
+        decade *= if index.is_multiple_of(PATTERN.len()) {
             10.0
         } else {
             1.0
