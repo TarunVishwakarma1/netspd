@@ -1,0 +1,19 @@
+# Dracula theme — https://draculatheme.com
+name = "Dracula"
+
+[colors]
+background = "#282a36"
+surface = "#313342"
+overlay = "#44475a"
+text = "#f8f8f2"
+subtext = "#bfc2d4"
+muted = "#6272a4"
+border = "#44475a"
+accent = "#bd93f9"
+accent_alt = "#ff79c6"
+success = "#50fa7b"
+warning = "#f1fa8c"
+danger = "#ff5555"
+download = "#8be9fd"
+upload = "#ff79c6"
+latency = "#50fa7b"

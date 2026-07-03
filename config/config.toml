@@ -1,0 +1,43 @@
+# netspd configuration
+#
+# This file is optional. netspd looks for configuration in:
+#   1. $XDG_CONFIG_HOME/netspd/config.toml (or ~/.config/netspd/config.toml)
+#   2. ./config/config.toml (relative to the working directory)
+#
+# Every key is optional and falls back to a sensible default.
+
+# Name of the active theme: "default", "nord", "dracula", "catppuccin", "gruvbox"
+theme = "default"
+
+# UI refresh rate in frames per second (1..=60).
+refresh_rate = 30
+
+# Speed test provider. Currently supported: "librespeed".
+provider = "librespeed"
+
+# Multiplier applied to UI animations. 1.0 is normal speed.
+animation_speed = 1.0
+
+[engine]
+# Number of HTTP latency samples collected during the ping phase.
+ping_samples = 10
+# Delay between ping samples, in milliseconds.
+ping_interval_ms = 100
+# Duration of each transfer phase (download / upload), in seconds.
+duration_secs = 10
+# Number of parallel connections used per transfer phase.
+connections = 4
+# Per-request timeout, in seconds.
+timeout_secs = 15
+# Size of each upload body, in kilobytes.
+upload_chunk_kb = 512
+
+# Custom servers override the provider's server discovery.
+# Uncomment to test against a self-hosted LibreSpeed backend.
+#
+# [[servers]]
+# name = "My Server"
+# url = "https://speedtest.example.com/backend/"
+# download_path = "garbage.php?ckSize=100"
+# upload_path = "empty.php"
+# ping_path = "empty.php"

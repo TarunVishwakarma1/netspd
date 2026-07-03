@@ -1,0 +1,50 @@
+[package]
+name = "netspd"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "A beautiful, modern, minimalistic network speed testing terminal application"
+license = "MIT"
+repository = "https://github.com/tarunvishwakarma1/netspd"
+keywords = ["speedtest", "network", "tui", "terminal", "bandwidth"]
+categories = ["command-line-utilities", "network-programming"]
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+bytes = "1"
+crossterm = { version = "0.29.0", features = ["event-stream"] }
+dirs = "6"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+ratatui = "0.30.2"
+reqwest = { version = "0.13.4", default-features = false, features = [
+    "rustls",
+    "stream",
+    "json",
+    "gzip",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "time",
+    "sync",
+] }
+tokio-util = "0.7"
+toml = "1.1.2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

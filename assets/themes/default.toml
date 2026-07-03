@@ -1,0 +1,19 @@
+# netspd default theme — soft, modern, terminal-native.
+name = "Default"
+
+[colors]
+background = "#16161e"
+surface = "#1f1f2b"
+overlay = "#2a2a3a"
+text = "#c8ccd8"
+subtext = "#9298ab"
+muted = "#565f74"
+border = "#33344a"
+accent = "#7aa2f7"
+accent_alt = "#bb9af7"
+success = "#9ece6a"
+warning = "#e0af68"
+danger = "#f7768e"
+download = "#7dcfff"
+upload = "#bb9af7"
+latency = "#9ece6a"

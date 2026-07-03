@@ -1,0 +1,19 @@
+# Nord theme — https://nordtheme.com
+name = "Nord"
+
+[colors]
+background = "#2e3440"
+surface = "#3b4252"
+overlay = "#434c5e"
+text = "#eceff4"
+subtext = "#d8dee9"
+muted = "#616e88"
+border = "#4c566a"
+accent = "#88c0d0"
+accent_alt = "#81a1c1"
+success = "#a3be8c"
+warning = "#ebcb8b"
+danger = "#bf616a"
+download = "#88c0d0"
+upload = "#b48ead"
+latency = "#a3be8c"
