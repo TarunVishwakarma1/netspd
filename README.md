@@ -20,13 +20,17 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 - **Hypercar tachometer** — heat-gradient value band, hatched redline, spring-physics needle with afterglow, ignition sweep before each phase, peak ghost notch, latency sub-dial; twin instrument cluster on wide terminals
 - **Live metrics** — current / average / peak speed, transferred bytes, ETA, elapsed time
 - **Latency analysis** — multiple samples, outlier trimming, jitter, real ICMP packet loss (graceful fallback where ICMP is unavailable)
+- **Bufferbloat grade** — latency is sampled *while* the link is saturated and graded A+–F against idle, per direction — the number Ookla's CLI doesn't show you
 - **Four providers** — LibreSpeed (default), Ookla speedtest.net, Netflix Fast.com, and `custom` for your own servers (self-hosted backends, LAN testing); switch with `--provider` or config
+- **Client *and* server in one binary** — `netspd serve` + `netspd --url` measure pod-to-pod, host-to-host or LAN links with nothing else installed; auto-headless in containers, env-var flags for K8s manifests
 - **Smart server discovery** — health-probes the server list, drops dead servers, auto-selects the nearest
-- **Headless mode** — `--no-tui` for scripts and cron, `--json` for machine-readable reports
+- **Headless mode** — `--no-tui` for scripts and cron, `--json`/`--csv` for machine-readable reports
+- **Shareable results** — `y` copies a paste-anywhere result card to the clipboard
 - **Result history** — every run appended as JSON lines to your data directory
 - **Streaming transfers** — nothing buffered in memory; parallel connections with EMA smoothing
 - **Themes** — Default, Nord, Dracula, Catppuccin, Gruvbox, plus your own TOML themes without recompiling
-- **Responsive layout** — adapts from 80×24 up to 4K terminals
+- **Responsive layout** — adapts from 80×24 up to 4K terminals; mouse wheel and click work in lists
+- **Plays nice everywhere** — `--ascii` for fonts without braille/blocks, `NO_COLOR` respected, `-4`/`-6` to force an address family
 - **Graceful everywhere** — cancellation, retries, timeouts; network failures never panic
 
 ## Installation
@@ -66,13 +70,23 @@ Requires Rust 1.88 or newer.
 netspd                     # full TUI
 netspd --no-tui            # headless: progress on stderr, summary on stdout
 netspd --json              # headless: report as one JSON object on stdout
+netspd --csv               # headless: report as CSV (header + row per run)
 netspd --list-servers      # print reachable servers, nearest first
 netspd -s tokyo            # pick a server by name/host substring
 netspd -p ookla            # provider: librespeed (default) | ookla | fast | custom
 netspd -d 5 -c 8           # 5-second phases over 8 connections
+netspd -i 15m              # repeat every 15 minutes (min 30s)
+netspd --json -i 1h        # watch mode: one JSON line per run, forever
+netspd --compare 3         # test the 3 nearest servers, ranked table
+netspd --history --csv     # dump stored results, no test
+netspd --ascii -4          # ASCII UI, IPv4 only
+netspd serve               # built-in speed test server on :9516
+netspd --url http://host:9516   # test against a `netspd serve` peer
 ```
 
 The test starts automatically: ping → download → upload, then a results summary. If a server fails mid-test, netspd automatically retries with the next-nearest one (unless you pinned a server with `--server`).
+
+With `--interval` (or `repeat_interval` in config) the TUI shows a countdown on the results screen and re-runs automatically — leave it open as a dashboard while the trends accumulate. Headless, the interval turns netspd into a watch loop that logs every run and survives transient failures, ideal under `systemd` or in a `tmux` pane.
 
 ### Keyboard
 
@@ -80,12 +94,14 @@ The test starts automatically: ping → download → upload, then a results summ
 | --- | --- |
 | `q` / `Esc` | Quit (Esc closes overlays first) |
 | `r` | Restart the test |
+| `y` | Copy a shareable result card to the clipboard |
 | `g` | Result trends from your history |
 | `s` | Server selection |
 | `t` | Theme selector |
-| `c` | View configuration |
+| `c` | Edit configuration (`←→` adjust, `w` save) |
 | `?` | Help |
-| `↑↓` / `jk`, `Enter` | Navigate and confirm in lists |
+| `↑↓` / `jk`, `Enter` | Navigate and confirm in lists (mouse wheel + click too) |
+| `←→` / `hl` | Adjust values · filter trends by server |
 
 ### Scripting
 
@@ -169,6 +185,64 @@ url = "http://192.168.1.50:8080/backend/"
 
 Then `netspd -p custom`. Loopback sanity check: this setup measures ~11 Gbps against a local process, so the meter itself won't be your bottleneck on 10GbE.
 
+## Containers and Kubernetes
+
+netspd is a single static binary that plays **both roles**: client and server. That makes pod-to-pod and pod-to-internet testing a two-liner — no separate backend image.
+
+Add it to any image (the musl binary has zero runtime dependencies):
+
+```dockerfile
+ARG NETSPD_VERSION=v0.1.3
+ADD https://github.com/TarunVishwakarma1/netspd/releases/download/${NETSPD_VERSION}/netspd-${NETSPD_VERSION}-x86_64-unknown-linux-musl.tar.gz /tmp/
+RUN tar -xzf /tmp/netspd-*.tar.gz --strip-components=1 -C /usr/local/bin --wildcards '*/netspd' && rm /tmp/netspd-*.tar.gz
+```
+
+When no terminal is attached (containers, CI, pipes), netspd automatically runs headless — no flags needed. Every flag also reads an env var (`NETSPD_URL`, `NETSPD_SERVER`, `NETSPD_PROVIDER`, `NETSPD_INTERVAL`, `NETSPD_JSON`, …).
+
+**Pod ↔ pod throughput** — run the built-in server in one pod:
+
+```yaml
+# server pod
+containers:
+  - name: netspd-server
+    command: ["netspd", "serve"]        # listens on :9516
+    ports: [{ containerPort: 9516 }]
+# expose it as a Service named netspd-server
+```
+
+and point any other pod at it:
+
+```yaml
+# client Job / debug container
+command: ["netspd"]
+env:
+  - { name: NETSPD_URL, value: "http://netspd-server:9516" }
+  - { name: NETSPD_JSON, value: "true" }
+```
+
+The JSON report (download/upload Mbps, ping, jitter, bufferbloat grade) lands in the pod logs, ready for any log pipeline. Loopback sanity: the loop sustains 11+ Gbps down / 22+ Gbps up, so the tool won't be the bottleneck on cluster networks.
+
+**Pod → internet** — same image, no server needed; a CronJob makes it a scheduled monitor:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: netspd }
+spec:
+  schedule: "*/30 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: netspd
+              image: your-image-with-netspd
+              command: ["netspd", "--json"]
+```
+
+`netspd serve` also answers LibreSpeed paths (`empty.php`, `garbage.php`), so existing LibreSpeed clients can test against it too. ICMP loss needs `CAP_NET_RAW` in containers and degrades gracefully without it.
+
 ## Architecture
 
 netspd follows clean architecture with strict one-way dependencies:
@@ -216,7 +290,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
 - [x] Packet loss via ICMP echo probing
 - [x] Homebrew tap
 - [x] Ookla and Fast.com providers
-- [ ] Scheduled repeat testing
+- [x] Scheduled repeat testing (`--interval`)
 
 ## License
 

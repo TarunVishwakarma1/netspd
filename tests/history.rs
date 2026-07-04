@@ -28,6 +28,7 @@ fn sample_report() -> TestReport {
             average_bps: 44_900_000.0,
             peak_bps: 64_100_000.0,
         },
+        bufferbloat: None,
     }
 }
 
@@ -41,6 +42,27 @@ fn record_flattens_report_into_mbps() {
     assert!((record.upload_mbps - 44.9).abs() < 1e-9);
     assert_eq!(record.download_bytes, 110_000_000);
     assert!(record.timestamp > 0);
+}
+
+#[test]
+fn record_serializes_to_csv_row() {
+    let record = HistoryRecord::from_report(&sample_report());
+    let row = record.to_csv_row();
+    assert_eq!(
+        row.split(',').count(),
+        HistoryRecord::CSV_HEADER.split(',').count()
+    );
+    assert!(row.contains("Test Server"));
+    assert!(row.contains("88.1"));
+}
+
+#[test]
+fn csv_quotes_fields_with_commas() {
+    let mut report = sample_report();
+    report.server_name = "Mumbai, India (ISP \"X\")".to_owned();
+    let record = HistoryRecord::from_report(&report);
+    let row = record.to_csv_row();
+    assert!(row.contains("\"Mumbai, India (ISP \"\"X\"\")\""));
 }
 
 #[test]

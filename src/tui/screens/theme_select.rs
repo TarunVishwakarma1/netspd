@@ -3,7 +3,7 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Clear, Padding, Paragraph};
+use ratatui::widgets::{Block, Clear, Padding, Paragraph};
 use ratatui::Frame;
 
 use crate::app::state::AppState;
@@ -17,7 +17,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
     frame.render_widget(Clear, popup);
 
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_set(crate::tui::glyphs::current().border)
         .border_style(Style::default().fg(colors.accent))
         .style(Style::default().bg(colors.overlay))
         .padding(Padding::new(2, 2, 1, 1))
@@ -37,8 +37,16 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
         .map(|(index, name)| {
             let is_cursor = index == state.theme_cursor;
             let is_active = index == state.theme_index;
-            let marker = if is_cursor { "▸ " } else { "  " };
-            let active_mark = if is_active { " ●" } else { "" };
+            let marker = if is_cursor {
+                crate::tui::glyphs::current().cursor
+            } else {
+                "  "
+            };
+            let active_mark = if is_active {
+                crate::tui::glyphs::current().active
+            } else {
+                ""
+            };
             let name_style = if is_cursor {
                 Style::default()
                     .fg(colors.accent)

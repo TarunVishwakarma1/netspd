@@ -117,7 +117,7 @@ fn render_gauge(
 ) {
     let colors = &theme.colors;
     let phase = state.phase;
-    let dial = area.height >= DIAL_MIN_HEIGHT;
+    let dial = area.height >= DIAL_MIN_HEIGHT && crate::tui::glyphs::current().fancy;
     let ping_ms = state
         .ping
         .stats

@@ -3,5 +3,5 @@
 mod loader;
 mod settings;
 
-pub use loader::{load, load_from};
+pub use loader::{load, load_from, save};
 pub use settings::{EngineSection, ServerEntry, Settings};

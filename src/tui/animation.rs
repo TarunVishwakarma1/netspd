@@ -1,13 +1,4 @@
-//! Animation primitives: spinner frames and smooth value interpolation.
-
-/// Braille spinner frames, one per UI tick.
-const SPINNER_FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-/// Returns the spinner glyph for a given UI tick.
-#[must_use]
-pub fn spinner_frame(tick: u64) -> &'static str {
-    SPINNER_FRAMES[(tick as usize) % SPINNER_FRAMES.len()]
-}
+//! Animation primitives: smooth value interpolation and spring physics.
 
 /// A value that eases smoothly toward its target.
 ///

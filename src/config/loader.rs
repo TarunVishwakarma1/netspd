@@ -36,6 +36,35 @@ pub fn load_from(path: &Path) -> ConfigResult<Settings> {
     })
 }
 
+/// Writes settings to the user configuration file, creating the
+/// directory on first use. Returns the path written.
+///
+/// Comments in an existing file are not preserved — the file is
+/// regenerated from the current values.
+pub fn save(settings: &Settings) -> ConfigResult<PathBuf> {
+    let Some(config_dir) = dirs::config_dir() else {
+        return Err(ConfigError::InvalidValue {
+            key: "config_dir",
+            reason: "no user configuration directory on this system".to_owned(),
+        });
+    };
+    let dir = config_dir.join("netspd");
+    let path = dir.join(FILE_NAME);
+    let serialized = toml::to_string_pretty(settings).map_err(|err| ConfigError::InvalidValue {
+        key: "settings",
+        reason: err.to_string(),
+    })?;
+    std::fs::create_dir_all(&dir).map_err(|source| ConfigError::Io {
+        path: dir.clone(),
+        source,
+    })?;
+    std::fs::write(&path, serialized).map_err(|source| ConfigError::Io {
+        path: path.clone(),
+        source,
+    })?;
+    Ok(path)
+}
+
 /// The locations searched for a configuration file, in priority order.
 fn candidate_paths() -> Vec<PathBuf> {
     let mut paths = Vec::with_capacity(2);

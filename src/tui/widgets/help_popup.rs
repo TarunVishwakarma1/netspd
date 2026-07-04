@@ -3,16 +3,17 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Clear, Padding, Paragraph};
+use ratatui::widgets::{Block, Clear, Padding, Paragraph};
 use ratatui::Frame;
 
 use crate::tui::layout::centered;
 use crate::tui::theme::Theme;
 
 /// The full keymap displayed in the popup.
-const BINDINGS: [(&str, &str); 9] = [
+const BINDINGS: [(&str, &str); 10] = [
     ("q / Esc", "quit"),
     ("r", "restart test"),
+    ("y", "copy result"),
     ("g", "result trends"),
     ("s", "select server"),
     ("t", "select theme"),
@@ -30,7 +31,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme) {
     frame.render_widget(Clear, popup);
 
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_set(crate::tui::glyphs::current().border)
         .border_style(Style::default().fg(colors.accent))
         .style(Style::default().bg(colors.overlay))
         .padding(Padding::new(2, 2, 1, 1))
@@ -46,6 +47,11 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme) {
     let lines: Vec<Line> = BINDINGS
         .iter()
         .map(|(key, description)| {
+            let key: &str = if *key == "↑↓ / jk" && !crate::tui::glyphs::current().fancy {
+                "jk"
+            } else {
+                key
+            };
             Line::from(vec![
                 Span::styled(format!("{key:>9}  "), Style::default().fg(colors.accent)),
                 Span::styled(*description, Style::default().fg(colors.subtext)),

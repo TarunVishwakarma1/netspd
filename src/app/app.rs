@@ -78,6 +78,7 @@ impl App {
                     Some(Ok(Event::Key(key))) if key.kind == KeyEventKind::Press => {
                         AppEvent::Key(key)
                     }
+                    Some(Ok(Event::Mouse(mouse))) => AppEvent::Mouse(mouse.kind),
                     Some(Ok(Event::Resize(_, _))) => AppEvent::Resize,
                     Some(Ok(_)) => continue,
                     // Terminal input errored or closed; nothing sensible
@@ -113,16 +114,18 @@ impl App {
                     let Some(action) = controller::map_key(self.state.screen, key) else {
                         continue;
                     };
-                    match controller::handle(&mut self.state, action) {
-                        Command::Quit => break,
-                        Command::StartTest => {
-                            self.failover_attempts = 0;
-                            self.start_test();
-                        }
-                        Command::LoadTrends => {
-                            self.state.trends = history::load_recent(TRENDS_LIMIT);
-                        }
-                        Command::None => {}
+                    let command = controller::handle(&mut self.state, action);
+                    if self.execute(command) {
+                        break;
+                    }
+                }
+                AppEvent::Mouse(kind) => {
+                    let Some(action) = controller::map_mouse(self.state.screen, kind) else {
+                        continue;
+                    };
+                    let command = controller::handle(&mut self.state, action);
+                    if self.execute(command) {
+                        break;
                     }
                 }
                 AppEvent::Resize => self.state.request_redraw(),
@@ -150,6 +153,7 @@ impl App {
                 AppEvent::Tick => {
                     self.state.on_tick();
                     self.maybe_leave_splash();
+                    self.maybe_repeat();
                     if self.state.take_redraw() {
                         let dt = last_frame.elapsed().as_secs_f64();
                         last_frame = Instant::now();
@@ -197,6 +201,58 @@ impl App {
             && !self.state.servers.is_empty()
             && self.state.splash_since.elapsed() >= MIN_SPLASH;
         if ready {
+            self.start_test();
+        }
+    }
+
+    /// Performs a controller command; returns `true` when the loop
+    /// should exit.
+    fn execute(&mut self, command: Command) -> bool {
+        match command {
+            Command::Quit => return true,
+            Command::StartTest => {
+                self.failover_attempts = 0;
+                self.start_test();
+            }
+            Command::LoadTrends => {
+                self.state.trends = history::load_recent(TRENDS_LIMIT);
+            }
+            Command::Share => self.share_result(),
+            Command::SaveConfig => match crate::config::save(&self.state.settings) {
+                Ok(path) => self
+                    .state
+                    .set_notice(format!("saved to {}", path.display())),
+                Err(err) => self.state.set_notice(err.to_string()),
+            },
+            Command::None => {}
+        }
+        false
+    }
+
+    /// Copies the last result to the clipboard and shows a confirmation.
+    fn share_result(&mut self) {
+        let Some(report) = &self.state.report else {
+            return;
+        };
+        let text = super::share::share_text(report, self.state.provider_name);
+        match super::share::copy_to_clipboard(&text) {
+            Ok(()) => self.state.set_notice("✓ result copied to clipboard"),
+            Err(message) => self.state.set_notice(message),
+        }
+    }
+
+    /// Auto-restarts the test once the configured repeat interval has
+    /// elapsed since the last completion. Only fires from the results
+    /// screen, so a user browsing overlays is never yanked away.
+    fn maybe_repeat(&mut self) {
+        let due = self.state.screen == Screen::Results
+            && !self.state.testing
+            && self
+                .state
+                .repeat_remaining()
+                .is_some_and(|remaining| remaining.is_zero());
+        if due {
+            self.failover_attempts = 0;
             self.start_test();
         }
     }

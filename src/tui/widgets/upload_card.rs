@@ -12,7 +12,7 @@ use super::transfer_card::{self, CardStyle};
 pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, view: &TransferView, active: bool) {
     let style = CardStyle {
         title: "Upload",
-        icon: "↑",
+        icon: crate::tui::glyphs::current().up,
         color: theme.colors.upload,
     };
     transfer_card::render(frame, area, theme, style, view, active);

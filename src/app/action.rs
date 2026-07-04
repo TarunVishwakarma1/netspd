@@ -17,14 +17,22 @@ pub enum Action {
     ShowThemes,
     /// Open the result trends screen.
     ShowTrends,
+    /// Copy the last result to the clipboard.
+    Share,
     /// Leave the current overlay screen.
     Back,
     /// Move the selection cursor up.
     MoveUp,
     /// Move the selection cursor down.
     MoveDown,
+    /// Adjust the focused value down / cycle the filter left.
+    MoveLeft,
+    /// Adjust the focused value up / cycle the filter right.
+    MoveRight,
     /// Confirm the current selection.
     Confirm,
+    /// Write the current settings to the config file.
+    SaveConfig,
 }
 
 /// A side effect the controller asks the runtime to perform.
@@ -41,4 +49,8 @@ pub enum Command {
     StartTest,
     /// Load stored results for the trends screen.
     LoadTrends,
+    /// Copy the last result to the clipboard.
+    Share,
+    /// Persist settings to the config file.
+    SaveConfig,
 }

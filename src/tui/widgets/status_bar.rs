@@ -9,7 +9,7 @@ use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 use crate::engine::models::TestPhase;
-use crate::tui::animation::spinner_frame;
+use crate::tui::glyphs;
 use crate::tui::theme::Theme;
 use crate::utils::format::{format_duration, format_eta};
 
@@ -34,11 +34,12 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, info: &StatusInfo) {
         return;
     }
     let colors = &theme.colors;
+    let glyphs = glyphs::current();
 
     let left = match info.phase {
         Some(phase) => Line::from(vec![
             Span::styled(
-                format!("  {} ", spinner_frame(info.tick)),
+                format!("  {} ", glyphs.spinner_frame(info.tick)),
                 Style::default().fg(colors.accent),
             ),
             Span::styled(
@@ -49,7 +50,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, info: &StatusInfo) {
             ),
         ]),
         None => Line::from(Span::styled(
-            "  ✓ Complete",
+            format!("  {} Complete", glyphs.check),
             Style::default().fg(colors.success),
         )),
     };

@@ -31,7 +31,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, report: &TestReport)
     frame.render_widget(
         Paragraph::new(
             Line::from(Span::styled(
-                "✓ TEST COMPLETE",
+                format!("{} TEST COMPLETE", crate::tui::glyphs::current().check),
                 Style::default()
                     .fg(colors.success)
                     .add_modifier(Modifier::BOLD),
@@ -47,7 +47,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, report: &TestReport)
     headline(
         frame,
         download_area,
-        "↓ DOWNLOAD",
+        &format!("{} DOWNLOAD", crate::tui::glyphs::current().down),
         &report.download,
         colors.download,
         colors.subtext,
@@ -55,34 +55,51 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, report: &TestReport)
     headline(
         frame,
         upload_area,
-        "↑ UPLOAD",
+        &format!("{} UPLOAD", crate::tui::glyphs::current().up),
         &report.upload,
         colors.upload,
         colors.subtext,
     );
 
     let latency = &report.latency;
-    frame.render_widget(
-        Paragraph::new(
-            Line::from(vec![
-                Span::styled("ping ", Style::default().fg(colors.subtext)),
-                Span::styled(
-                    format_millis(latency.average_ms),
-                    Style::default().fg(colors.latency),
-                ),
-                Span::styled("   jitter ", Style::default().fg(colors.subtext)),
-                Span::styled(
-                    format_millis(latency.jitter_ms),
-                    Style::default().fg(colors.latency),
-                ),
-                Span::styled("   loss ", Style::default().fg(colors.subtext)),
-                Span::styled(
-                    format!("{:.0}%", latency.packet_loss_pct),
-                    Style::default().fg(colors.latency),
-                ),
-            ])
-            .centered(),
+    let mut latency_spans = vec![
+        Span::styled("ping ", Style::default().fg(colors.subtext)),
+        Span::styled(
+            format_millis(latency.average_ms),
+            Style::default().fg(colors.latency),
         ),
+        Span::styled("   jitter ", Style::default().fg(colors.subtext)),
+        Span::styled(
+            format_millis(latency.jitter_ms),
+            Style::default().fg(colors.latency),
+        ),
+        Span::styled("   loss ", Style::default().fg(colors.subtext)),
+        Span::styled(
+            format!("{:.0}%", latency.packet_loss_pct),
+            Style::default().fg(colors.latency),
+        ),
+    ];
+    if let Some(bloat) = report.bufferbloat {
+        let grade_color = match bloat.grade {
+            crate::engine::models::BufferbloatGrade::APlus
+            | crate::engine::models::BufferbloatGrade::A => colors.success,
+            crate::engine::models::BufferbloatGrade::B
+            | crate::engine::models::BufferbloatGrade::C => colors.warning,
+            _ => colors.danger,
+        };
+        latency_spans.push(Span::styled(
+            "   bufferbloat ",
+            Style::default().fg(colors.subtext),
+        ));
+        latency_spans.push(Span::styled(
+            bloat.grade.label(),
+            Style::default()
+                .fg(grade_color)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+    frame.render_widget(
+        Paragraph::new(Line::from(latency_spans).centered()),
         latency_area,
     );
 

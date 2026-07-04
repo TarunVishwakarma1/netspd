@@ -4,7 +4,7 @@
 //! state synchronously and returns a [`Command`] for anything that needs a
 //! side effect (spawning a test, quitting), which the runtime executes.
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, MouseEventKind};
 
 use super::action::{Action, Command};
 use super::state::{AppState, Screen};
@@ -27,9 +27,30 @@ pub fn map_key(screen: Screen, key: KeyEvent) -> Option<Action> {
         KeyCode::Char('c') => Some(Action::ShowSettings),
         KeyCode::Char('?') => Some(Action::ShowHelp),
         KeyCode::Char('g') => Some(Action::ShowTrends),
+        KeyCode::Char('y') => Some(Action::Share),
         KeyCode::Up | KeyCode::Char('k') => Some(Action::MoveUp),
         KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
+        KeyCode::Left | KeyCode::Char('h') => Some(Action::MoveLeft),
+        KeyCode::Right | KeyCode::Char('l') => Some(Action::MoveRight),
+        KeyCode::Char('w') if screen == Screen::Settings => Some(Action::SaveConfig),
         KeyCode::Enter => Some(Action::Confirm),
+        _ => None,
+    }
+}
+
+/// Decodes a mouse event into an [`Action`] for the current screen.
+///
+/// The wheel navigates selection lists; a left click confirms the
+/// highlighted entry. Other screens ignore the mouse.
+#[must_use]
+pub fn map_mouse(screen: Screen, kind: MouseEventKind) -> Option<Action> {
+    if !matches!(screen, Screen::ServerSelect | Screen::ThemeSelect) {
+        return None;
+    }
+    match kind {
+        MouseEventKind::ScrollUp => Some(Action::MoveUp),
+        MouseEventKind::ScrollDown => Some(Action::MoveDown),
+        MouseEventKind::Down(crossterm::event::MouseButton::Left) => Some(Action::Confirm),
         _ => None,
     }
 }
@@ -70,6 +91,13 @@ pub fn handle(state: &mut AppState, action: Action) -> Command {
             open_overlay(state, Screen::Trends);
             Command::LoadTrends
         }
+        Action::Share => {
+            if state.report.is_some() {
+                Command::Share
+            } else {
+                Command::None
+            }
+        }
         Action::Back => {
             if state.screen.is_overlay() {
                 state.screen = state.return_to;
@@ -84,7 +112,25 @@ pub fn handle(state: &mut AppState, action: Action) -> Command {
             move_cursor(state, 1);
             Command::None
         }
+        Action::MoveLeft => {
+            adjust(state, -1);
+            Command::None
+        }
+        Action::MoveRight => {
+            adjust(state, 1);
+            Command::None
+        }
+        Action::SaveConfig => Command::SaveConfig,
         Action::Confirm => confirm(state),
+    }
+}
+
+/// Applies a left/right adjustment on screens that support it.
+fn adjust(state: &mut AppState, delta: i64) {
+    match state.screen {
+        Screen::Trends => state.cycle_trends_filter(delta),
+        Screen::Settings => state.adjust_setting(delta),
+        _ => {}
     }
 }
 
@@ -104,6 +150,7 @@ fn move_cursor(state: &mut AppState, delta: i64) {
     let (cursor, len) = match state.screen {
         Screen::ServerSelect => (&mut state.server_cursor, state.servers.len()),
         Screen::ThemeSelect => (&mut state.theme_cursor, state.theme_names.len()),
+        Screen::Settings => (&mut state.settings_cursor, AppState::SETTINGS_ROWS),
         _ => return,
     };
     if len == 0 {

@@ -1,6 +1,6 @@
 [package]
 name = "netspd"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.88"
 description = "A beautiful, modern, minimalistic network speed testing terminal application"
@@ -24,7 +24,7 @@ exclude = [
 anyhow = "1"
 async-trait = "0.1"
 bytes = "1"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 dirs = "6"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
@@ -44,6 +44,9 @@ tokio = { version = "1", features = [
     "macros",
     "time",
     "sync",
+    "net",
+    "io-util",
+    "signal",
 ] }
 tokio-util = "0.7"
 toml = "1.1.2"

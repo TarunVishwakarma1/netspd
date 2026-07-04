@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::engine::models::Server;
 use crate::engine::providers::ProviderKind;
@@ -12,7 +12,7 @@ use crate::engine::{EngineConfig, PingConfig, TransferConfig};
 ///
 /// Every field has a default, so an empty or missing file yields a fully
 /// working configuration.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
     /// Name of the active theme (matched case-insensitively).
@@ -25,6 +25,9 @@ pub struct Settings {
     pub animation_speed: f64,
     /// Engine tuning parameters.
     pub engine: EngineSection,
+    /// Repeat the test on this interval, e.g. `"15m"` (min 30s).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repeat_interval: Option<String>,
     /// Custom servers overriding provider discovery.
     pub servers: Vec<ServerEntry>,
 }
@@ -37,13 +40,14 @@ impl Default for Settings {
             provider: ProviderKind::default(),
             animation_speed: 1.0,
             engine: EngineSection::default(),
+            repeat_interval: None,
             servers: Vec::new(),
         }
     }
 }
 
 /// Engine tuning parameters from the `[engine]` table.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct EngineSection {
     /// Number of latency samples collected during the ping phase.
@@ -76,7 +80,7 @@ impl Default for EngineSection {
 }
 
 /// One custom server from a `[[servers]]` table.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerEntry {
     /// Display name.
@@ -143,7 +147,19 @@ impl Settings {
                 connect_timeout: Duration::from_secs(self.engine.timeout_secs.clamp(2, 120)),
                 lead_in: defaults.transfer.lead_in,
             },
+            ip_family: None,
         }
+    }
+
+    /// The parsed repeat interval, if configured and valid.
+    ///
+    /// Invalid strings are treated as unset rather than fatal: a typo in
+    /// the config should not block a one-off test.
+    #[must_use]
+    pub fn repeat_interval(&self) -> Option<Duration> {
+        self.repeat_interval
+            .as_deref()
+            .and_then(|value| crate::utils::duration::parse_interval(value).ok())
     }
 
     /// Applies command line overrides on top of the file configuration.

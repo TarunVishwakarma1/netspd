@@ -13,5 +13,5 @@ pub mod network;
 pub mod providers;
 mod scheduler;
 
-pub use engine::{Engine, EngineConfig, PingConfig, TransferConfig};
+pub use engine::{Engine, EngineConfig, IpFamily, PingConfig, TransferConfig};
 pub use event::EngineEvent;

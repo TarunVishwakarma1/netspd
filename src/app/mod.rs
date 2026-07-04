@@ -12,4 +12,6 @@ pub mod controller;
 pub mod event;
 pub mod headless;
 pub mod history;
+pub mod serve;
+pub mod share;
 pub mod state;

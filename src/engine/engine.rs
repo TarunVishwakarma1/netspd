@@ -14,6 +14,15 @@ use super::models::{Server, TestReport};
 use super::providers::Provider;
 use super::scheduler;
 
+/// Address family restriction for measurements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpFamily {
+    /// IPv4 only.
+    V4,
+    /// IPv6 only.
+    V6,
+}
+
 /// Settings for the ping phase.
 #[derive(Debug, Clone, Copy)]
 pub struct PingConfig {
@@ -79,6 +88,8 @@ pub struct EngineConfig {
     pub ping: PingConfig,
     /// Transfer phase settings.
     pub transfer: TransferConfig,
+    /// Restrict measurements to one address family.
+    pub ip_family: Option<IpFamily>,
 }
 
 /// The speed test engine.
@@ -96,9 +107,10 @@ pub struct Engine {
 impl Engine {
     /// Creates an engine for the given provider and configuration.
     pub fn new(provider: Arc<dyn Provider>, config: EngineConfig) -> EngineResult<Self> {
-        let client = super::network::client::build_client(
+        let client = super::network::client::build_client_with_family(
             config.transfer.connect_timeout,
             config.transfer.connections,
+            config.ip_family,
         )?;
         Ok(Self {
             provider,

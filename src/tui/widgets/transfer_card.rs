@@ -3,7 +3,7 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Padding, Paragraph};
+use ratatui::widgets::{Block, Padding, Paragraph};
 use ratatui::Frame;
 
 use crate::app::state::TransferView;
@@ -40,7 +40,7 @@ pub fn render(
     let colors = &theme.colors;
     let border_color = if active { color } else { colors.border };
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_set(crate::tui::glyphs::current().border)
         .border_style(Style::default().fg(border_color))
         .padding(Padding::horizontal(1))
         .title(Line::from(vec![

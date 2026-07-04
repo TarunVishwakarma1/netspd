@@ -182,8 +182,19 @@ pub struct AppState {
     pub client_info: Option<String>,
     /// Server query from `--server`; applied when discovery completes.
     pub preferred_server: Option<String>,
+    /// Auto-restart the test this long after completion, when set.
+    pub repeat_every: Option<Duration>,
+    /// When the last test completed; drives the repeat countdown.
+    pub finished_at: Option<Instant>,
     /// Past results shown on the trends screen.
     pub trends: Vec<crate::app::history::HistoryRecord>,
+    /// Trends server filter: 0 = all, otherwise index+1 into
+    /// [`AppState::trend_servers`].
+    pub trends_filter: usize,
+    /// Highlighted row on the settings screen.
+    pub settings_cursor: usize,
+    /// A transient status message (e.g. clipboard confirmation).
+    notice: Option<(String, Instant)>,
     /// Set when the visible content changed and a redraw is required.
     dirty: bool,
 }
@@ -221,8 +232,133 @@ impl AppState {
             provider_name,
             client_info: None,
             preferred_server: None,
+            repeat_every: None,
+            finished_at: None,
             trends: Vec::new(),
+            trends_filter: 0,
+            settings_cursor: 0,
+            notice: None,
             dirty: true,
+        }
+    }
+
+    /// Unique server names present in the loaded trends, sorted.
+    #[must_use]
+    pub fn trend_servers(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .trends
+            .iter()
+            .map(|record| record.server.clone())
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    /// Cycles the trends server filter left or right.
+    pub fn cycle_trends_filter(&mut self, delta: i64) {
+        let options = self.trend_servers().len() + 1;
+        if options <= 1 {
+            return;
+        }
+        let current = self.trends_filter as i64;
+        self.trends_filter = (current + delta).rem_euclid(options as i64) as usize;
+        self.request_redraw();
+    }
+
+    /// The trends records passing the current server filter.
+    #[must_use]
+    pub fn filtered_trends(&self) -> Vec<&crate::app::history::HistoryRecord> {
+        match self.trends_filter.checked_sub(1) {
+            None => self.trends.iter().collect(),
+            Some(index) => {
+                let servers = self.trend_servers();
+                match servers.get(index) {
+                    Some(name) => self
+                        .trends
+                        .iter()
+                        .filter(|record| &record.server == name)
+                        .collect(),
+                    None => self.trends.iter().collect(),
+                }
+            }
+        }
+    }
+
+    /// Number of editable rows on the settings screen.
+    pub const SETTINGS_ROWS: usize = 8;
+
+    /// Adjusts the setting under the cursor by one step, within the same
+    /// clamps the config loader enforces.
+    pub fn adjust_setting(&mut self, delta: i64) {
+        let up = delta > 0;
+        let step_u64 = |value: u64, min: u64, max: u64, step: u64| -> u64 {
+            if up {
+                (value + step).min(max)
+            } else {
+                value.saturating_sub(step).max(min)
+            }
+        };
+        match self.settings_cursor {
+            0 => {
+                // Theme: applies live.
+                let count = self.theme_names.len().max(1);
+                let current = self.theme_index as i64;
+                self.theme_index = (current + delta).rem_euclid(count as i64) as usize;
+                self.theme_cursor = self.theme_index;
+                if let Some(name) = self.theme_names.get(self.theme_index) {
+                    self.settings.theme = name.to_lowercase();
+                }
+            }
+            1 => {
+                self.settings.refresh_rate =
+                    step_u64(u64::from(self.settings.refresh_rate), 5, 60, 5) as u16;
+            }
+            2 => {
+                let value = (self.settings.animation_speed * 10.0).round() / 10.0;
+                self.settings.animation_speed = if up {
+                    (value + 0.1).min(5.0)
+                } else {
+                    (value - 0.1).max(0.1)
+                };
+            }
+            3 => {
+                self.settings.engine.ping_samples =
+                    step_u64(u64::from(self.settings.engine.ping_samples), 3, 100, 1) as u32;
+            }
+            4 => {
+                self.settings.engine.duration_secs =
+                    step_u64(self.settings.engine.duration_secs, 3, 60, 1);
+            }
+            5 => {
+                self.settings.engine.connections =
+                    step_u64(self.settings.engine.connections as u64, 1, 16, 1) as usize;
+            }
+            6 => {
+                self.settings.engine.timeout_secs =
+                    step_u64(self.settings.engine.timeout_secs, 2, 120, 1);
+            }
+            _ => {
+                self.settings.engine.upload_chunk_kb =
+                    step_u64(self.settings.engine.upload_chunk_kb as u64, 64, 8192, 64) as usize;
+            }
+        }
+        self.request_redraw();
+    }
+
+    /// Shows a transient status message for a few seconds.
+    pub fn set_notice(&mut self, message: impl Into<String>) {
+        self.notice = Some((message.into(), Instant::now()));
+        self.request_redraw();
+    }
+
+    /// The current notice, if it has not expired yet.
+    #[must_use]
+    pub fn notice(&self) -> Option<&str> {
+        const NOTICE_TTL: Duration = Duration::from_secs(3);
+        match &self.notice {
+            Some((message, shown)) if shown.elapsed() < NOTICE_TTL => Some(message),
+            _ => None,
         }
     }
 
@@ -272,6 +408,25 @@ impl AppState {
         if self.screen.is_animated() {
             self.request_redraw();
         }
+        // Keep the repeat countdown on the results screen ticking.
+        if self.repeat_every.is_some() && self.screen == Screen::Results {
+            self.request_redraw();
+        }
+        // Expire transient notices.
+        if let Some((_, shown)) = &self.notice {
+            if shown.elapsed() >= Duration::from_secs(3) {
+                self.notice = None;
+                self.request_redraw();
+            }
+        }
+    }
+
+    /// Time remaining until the next scheduled auto-restart.
+    #[must_use]
+    pub fn repeat_remaining(&self) -> Option<Duration> {
+        let interval = self.repeat_every?;
+        let finished = self.finished_at?;
+        Some(interval.saturating_sub(finished.elapsed()))
     }
 
     /// Reduces the result of background server discovery.
@@ -345,6 +500,7 @@ impl AppState {
                 self.report = Some(report);
                 self.testing = false;
                 self.phase = None;
+                self.finished_at = Some(Instant::now());
                 if !self.screen.is_overlay() {
                     self.screen = Screen::Results;
                 }
@@ -362,6 +518,7 @@ impl AppState {
     /// Marks a new test as running.
     pub fn begin_test(&mut self) {
         self.reset_test();
+        self.finished_at = None;
         self.testing = true;
         self.started_at = Some(Instant::now());
         self.screen = Screen::Testing;

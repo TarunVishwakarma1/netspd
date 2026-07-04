@@ -27,22 +27,30 @@ const MAX_ATTEMPTS: usize = 3;
 pub struct Options {
     /// Emit the final report as JSON on stdout.
     pub json: bool,
+    /// Emit the final report as CSV on stdout (header then rows).
+    pub csv: bool,
     /// Pick the first server whose name or host contains this text.
     pub server: Option<String>,
     /// List reachable servers and exit without testing.
     pub list_servers: bool,
+    /// Repeat the test on this interval (start to start), forever.
+    pub interval: Option<std::time::Duration>,
+    /// Test the N nearest servers and print a ranked comparison.
+    pub compare: Option<usize>,
 }
 
-/// Runs one complete speed test (or server listing) without a terminal
-/// UI.
+/// Runs headless: a single test, a server listing, or — with an
+/// interval — an endless watch loop.
 ///
-/// Human-readable progress goes to stderr; the result goes to stdout
-/// (JSON when requested). Completed reports are appended to the history
+/// Human-readable progress goes to stderr; results go to stdout (JSON
+/// Lines when requested). Completed reports are appended to the history
 /// file. Unless a server is pinned with `--server`, up to three of the
-/// nearest servers are tried before failing.
+/// nearest servers are tried per run. In watch mode a failed run is
+/// logged and the loop continues — transient outages are exactly what
+/// scheduled testing is for.
 pub async fn run(engine: Engine, options: Options) -> anyhow::Result<()> {
     let log = |line: String| {
-        if !options.json {
+        if !options.json && !options.csv {
             eprintln!("{line}");
         }
     };
@@ -61,6 +69,132 @@ pub async fn run(engine: Engine, options: Options) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if options.csv {
+        println!("{}", HistoryRecord::CSV_HEADER);
+    }
+
+    if let Some(count) = options.compare {
+        return compare_servers(&engine, &servers, count.clamp(2, 8), &options, &log).await;
+    }
+
+    let Some(interval) = options.interval else {
+        return test_once(&engine, &servers, &options, &log).await;
+    };
+
+    log(format!(
+        "repeating every {} (Ctrl+C to stop)",
+        crate::utils::format::format_eta(interval)
+    ));
+    loop {
+        let started = std::time::Instant::now();
+        if let Err(err) = test_once(&engine, &servers, &options, &log).await {
+            log(format!("run failed ({err}); continuing"));
+        }
+        let wait = interval.saturating_sub(started.elapsed());
+        log(format!(
+            "next run in {}",
+            crate::utils::format::format_eta(wait)
+        ));
+        tokio::time::sleep(wait).await;
+    }
+}
+
+/// Tests the `count` nearest servers back to back and prints a ranked
+/// comparison (best download first). Individual failures are noted and
+/// skipped, not fatal — unless every server fails.
+async fn compare_servers(
+    engine: &Engine,
+    servers: &[Server],
+    count: usize,
+    options: &Options,
+    log: &impl Fn(String),
+) -> anyhow::Result<()> {
+    let mut results: Vec<HistoryRecord> = Vec::new();
+    for server in servers.iter().take(count) {
+        log(format!("server: {} ({})", server.name, server.description));
+        match run_once(engine, server, log).await {
+            Ok(report) => {
+                history::record_report(&report);
+                results.push(HistoryRecord::from_report(&report));
+            }
+            Err(err) => log(format!("  skipped ({err})")),
+        }
+    }
+    if results.is_empty() {
+        return Err(anyhow!("every compared server failed"));
+    }
+    results.sort_by(|a, b| b.download_mbps.total_cmp(&a.download_mbps));
+
+    if options.json {
+        println!(
+            "{}",
+            serde_json::to_string(&results).context("failed to encode comparison")?
+        );
+    } else if options.csv {
+        for record in &results {
+            println!("{}", record.to_csv_row());
+        }
+    } else {
+        println!(
+            "{rank:<3} {server:<40} {ping:>9} {down:>12} {up:>12}  bloat",
+            rank = "#",
+            server = "server",
+            ping = "ping",
+            down = "down",
+            up = "up",
+        );
+        for (rank, record) in results.iter().enumerate() {
+            println!(
+                "{:<3} {:<40} {:>9} {:>12} {:>12}  {}",
+                rank + 1,
+                record.server.chars().take(40).collect::<String>(),
+                format_millis(record.ping_ms),
+                format!("{} Mbps", record.download_mbps),
+                format!("{} Mbps", record.upload_mbps),
+                record.bufferbloat.as_deref().unwrap_or("-"),
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Prints stored history (newest last) in the chosen format and returns.
+pub fn print_history(json: bool, csv: bool) {
+    let records = history::load_recent(usize::MAX);
+    if csv {
+        println!("{}", HistoryRecord::CSV_HEADER);
+    }
+    for record in &records {
+        if json {
+            if let Ok(line) = record.to_json() {
+                println!("{line}");
+            }
+        } else if csv {
+            println!("{}", record.to_csv_row());
+        } else {
+            println!(
+                "{}  {}: v {} Mbps  ^ {} Mbps  ping {}",
+                record.timestamp,
+                record.server,
+                record.download_mbps,
+                record.upload_mbps,
+                format_millis(record.ping_ms),
+            );
+        }
+    }
+    if records.is_empty() && !json && !csv {
+        eprintln!("no stored results yet — run a test first");
+    }
+}
+
+/// Runs one test with failover across the nearest servers, printing the
+/// result to stdout.
+async fn test_once(
+    engine: &Engine,
+    servers: &[Server],
+    options: &Options,
+    log: &impl Fn(String),
+) -> anyhow::Result<()> {
     let candidates: Vec<Server> = match &options.server {
         Some(query) => {
             let server = servers
@@ -69,19 +203,21 @@ pub async fn run(engine: Engine, options: Options) -> anyhow::Result<()> {
                 .ok_or_else(|| anyhow!("no server matching {query:?}; try --list-servers"))?;
             vec![server.clone()]
         }
-        None => servers.into_iter().take(MAX_ATTEMPTS).collect(),
+        None => servers.iter().take(MAX_ATTEMPTS).cloned().collect(),
     };
 
     let total = candidates.len();
     let mut last_error = anyhow!("no servers attempted");
     for (attempt, server) in candidates.into_iter().enumerate() {
         log(format!("server: {} ({})", server.name, server.description));
-        match run_once(&engine, &server, &log).await {
+        match run_once(engine, &server, log).await {
             Ok(report) => {
                 history::record_report(&report);
                 let record = HistoryRecord::from_report(&report);
                 if options.json {
                     println!("{}", record.to_json().context("failed to encode report")?);
+                } else if options.csv {
+                    println!("{}", record.to_csv_row());
                 } else {
                     println!(
                         "{}: ↓ {} ↑ {} ping {}",
@@ -174,7 +310,18 @@ fn note_event(
                 format_bytes(stats.bytes)
             ));
         }
-        EngineEvent::Finished { report: done } => *report = Some(done),
+        EngineEvent::Finished { report: done } => {
+            if let Some(bloat) = done.bufferbloat {
+                log(format!(
+                    "  bufferbloat {}  (idle {} → down {} / up {})",
+                    bloat.grade.label(),
+                    format_millis(bloat.idle_ms),
+                    format_millis(bloat.download_ms),
+                    format_millis(bloat.upload_ms)
+                ));
+            }
+            *report = Some(done);
+        }
         EngineEvent::Failed { message } => *failure = Some(message),
         EngineEvent::PingSample { .. } | EngineEvent::Progress { .. } => {}
     }

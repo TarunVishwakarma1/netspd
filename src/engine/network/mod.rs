@@ -9,6 +9,7 @@ pub mod download;
 pub mod health;
 pub mod icmp;
 pub mod info;
+pub mod loaded_latency;
 pub mod ping;
 mod transfer;
 pub mod upload;

@@ -1,6 +1,6 @@
 //! The unified event type driving the application loop.
 
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyEvent, MouseEventKind};
 
 use crate::engine::models::Server;
 use crate::engine::EngineEvent;
@@ -13,6 +13,8 @@ use crate::engine::EngineEvent;
 pub enum AppEvent {
     /// A key press from the terminal.
     Key(KeyEvent),
+    /// A mouse action from the terminal.
+    Mouse(MouseEventKind),
     /// The terminal was resized.
     Resize,
     /// A UI timer tick.

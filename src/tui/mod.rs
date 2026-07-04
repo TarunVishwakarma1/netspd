@@ -5,6 +5,7 @@
 //! application state and draws it; it never talks to the network.
 
 pub mod animation;
+pub mod glyphs;
 pub mod layout;
 pub mod renderer;
 pub mod screens;

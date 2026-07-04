@@ -8,8 +8,8 @@ use crate::errors::EngineResult;
 
 use super::engine::EngineConfig;
 use super::event::{emit, EngineEvent};
-use super::models::{LatencyStats, Server, TestPhase, TestReport};
-use super::network::{download, icmp, ping, upload};
+use super::models::{Bufferbloat, LatencyStats, Server, TestPhase, TestReport};
+use super::network::{download, icmp, loaded_latency, ping, upload};
 
 /// Runs ping, download and upload in sequence against one server and
 /// assembles the final report.
@@ -51,14 +51,25 @@ pub(crate) async fn run_sequence(
     )
     .await?;
     lead_in(config, cancel).await?;
-    let download_stats = download::run_download(
-        client,
-        &server.endpoints.download,
-        &config.transfer,
-        events,
-        cancel,
-    )
-    .await?;
+    // Latency is sampled while the link is saturated: the difference
+    // against idle latency is the bufferbloat measurement.
+    let sampler_stop = cancel.child_token();
+    let (download_stats, loaded_down_ms) = tokio::join!(
+        async {
+            let result = download::run_download(
+                client,
+                &server.endpoints.download,
+                &config.transfer,
+                events,
+                cancel,
+            )
+            .await;
+            sampler_stop.cancel();
+            result
+        },
+        loaded_latency::sample_until_stopped(client, &server.endpoints.ping, &sampler_stop),
+    );
+    let download_stats = download_stats?;
     emit(
         events,
         EngineEvent::TransferFinished {
@@ -76,14 +87,23 @@ pub(crate) async fn run_sequence(
     )
     .await?;
     lead_in(config, cancel).await?;
-    let upload_stats = upload::run_upload(
-        client,
-        &server.endpoints.upload,
-        &config.transfer,
-        events,
-        cancel,
-    )
-    .await?;
+    let sampler_stop = cancel.child_token();
+    let (upload_stats, loaded_up_ms) = tokio::join!(
+        async {
+            let result = upload::run_upload(
+                client,
+                &server.endpoints.upload,
+                &config.transfer,
+                events,
+                cancel,
+            )
+            .await;
+            sampler_stop.cancel();
+            result
+        },
+        loaded_latency::sample_until_stopped(client, &server.endpoints.ping, &sampler_stop),
+    );
+    let upload_stats = upload_stats?;
     emit(
         events,
         EngineEvent::TransferFinished {
@@ -93,11 +113,17 @@ pub(crate) async fn run_sequence(
     )
     .await?;
 
+    let bufferbloat = match (loaded_down_ms, loaded_up_ms) {
+        (Some(down), Some(up)) => Some(Bufferbloat::new(latency.average_ms, down, up)),
+        _ => None,
+    };
+
     Ok(TestReport {
         server_name: server.name.clone(),
         latency,
         download: download_stats,
         upload: upload_stats,
+        bufferbloat,
     })
 }
 

@@ -2,6 +2,7 @@
 
 use std::io::{self, Stdout};
 
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -23,7 +24,12 @@ impl Tui {
     pub fn new() -> io::Result<Self> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
+        execute!(
+            stdout,
+            EnterAlternateScreen,
+            EnableMouseCapture,
+            cursor::Hide
+        )?;
         let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
         Ok(Self { terminal })
     }
@@ -39,7 +45,12 @@ impl Tui {
     /// Safe to call multiple times; also invoked on drop.
     pub fn restore() -> io::Result<()> {
         disable_raw_mode()?;
-        execute!(io::stdout(), LeaveAlternateScreen, cursor::Show)?;
+        execute!(
+            io::stdout(),
+            DisableMouseCapture,
+            LeaveAlternateScreen,
+            cursor::Show
+        )?;
         Ok(())
     }
 }

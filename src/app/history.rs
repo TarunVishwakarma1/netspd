@@ -40,6 +40,15 @@ pub struct HistoryRecord {
     pub upload_peak_mbps: f64,
     /// Bytes uploaded.
     pub upload_bytes: u64,
+    /// Median latency during download, in milliseconds, when measured.
+    #[serde(default)]
+    pub loaded_down_ms: Option<f64>,
+    /// Median latency during upload, in milliseconds, when measured.
+    #[serde(default)]
+    pub loaded_up_ms: Option<f64>,
+    /// Bufferbloat grade (`A+`..`F`), when measured.
+    #[serde(default)]
+    pub bufferbloat: Option<String>,
 }
 
 impl HistoryRecord {
@@ -62,12 +71,54 @@ impl HistoryRecord {
             upload_mbps: round1(report.upload.average_bps / MBPS),
             upload_peak_mbps: round1(report.upload.peak_bps / MBPS),
             upload_bytes: report.upload.bytes,
+            loaded_down_ms: report.bufferbloat.map(|b| round1(b.download_ms)),
+            loaded_up_ms: report.bufferbloat.map(|b| round1(b.upload_ms)),
+            bufferbloat: report.bufferbloat.map(|b| b.grade.label().to_owned()),
         }
     }
 
     /// Serializes the record as a single JSON line.
     pub fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string(self)
+    }
+
+    /// The CSV header matching [`HistoryRecord::to_csv_row`].
+    pub const CSV_HEADER: &'static str = "timestamp,server,ping_ms,jitter_ms,packet_loss_pct,\
+         download_mbps,download_peak_mbps,download_bytes,\
+         upload_mbps,upload_peak_mbps,upload_bytes,\
+         loaded_down_ms,loaded_up_ms,bufferbloat";
+
+    /// Serializes the record as one CSV row; unmeasured fields stay
+    /// empty.
+    #[must_use]
+    pub fn to_csv_row(&self) -> String {
+        let opt = |value: Option<f64>| value.map(|v| v.to_string()).unwrap_or_default();
+        format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            self.timestamp,
+            csv_field(&self.server),
+            self.ping_ms,
+            self.jitter_ms,
+            self.packet_loss_pct,
+            self.download_mbps,
+            self.download_peak_mbps,
+            self.download_bytes,
+            self.upload_mbps,
+            self.upload_peak_mbps,
+            self.upload_bytes,
+            opt(self.loaded_down_ms),
+            opt(self.loaded_up_ms),
+            self.bufferbloat.as_deref().unwrap_or_default(),
+        )
+    }
+}
+
+/// Quotes a CSV field when it contains delimiters or quotes.
+fn csv_field(value: &str) -> String {
+    if value.contains([',', '"', '\n']) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_owned()
     }
 }
 

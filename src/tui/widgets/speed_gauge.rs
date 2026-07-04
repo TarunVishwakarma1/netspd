@@ -49,8 +49,21 @@ pub fn render(
         label_area,
     );
 
-    digits::render_value(frame, digits_area, &value, unit, color, colors.muted);
-    render_sparkline(frame, spark_area, history, color);
+    if crate::tui::glyphs::current().fancy {
+        digits::render_value(frame, digits_area, &value, unit, color, colors.muted);
+        render_sparkline(frame, spark_area, history, color);
+    } else {
+        // ASCII mode: plain bold text, no block digits or sparkline.
+        let line = Line::from(vec![
+            Span::styled(
+                value,
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(format!(" {unit}"), Style::default().fg(colors.muted)),
+        ])
+        .centered();
+        frame.render_widget(Paragraph::new(line), digits_area);
+    }
 }
 
 /// Draws the recent-sample sparkline centered under the digits.

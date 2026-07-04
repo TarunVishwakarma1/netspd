@@ -3,7 +3,7 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Clear, Padding, Paragraph, Wrap};
+use ratatui::widgets::{Block, Clear, Padding, Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::tui::layout::centered;
@@ -18,7 +18,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, message: &str) {
     frame.render_widget(Clear, popup);
 
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_set(crate::tui::glyphs::current().border)
         .border_style(Style::default().fg(colors.danger))
         .style(Style::default().bg(colors.overlay))
         .padding(Padding::new(2, 2, 1, 1))

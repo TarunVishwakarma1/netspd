@@ -30,10 +30,19 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, tick: u64, status: &
     ])
     .areas(content);
 
-    let logo_lines: Vec<Line> = LOGO
-        .iter()
-        .map(|row| Line::from(Span::styled(*row, Style::default().fg(colors.accent))).centered())
-        .collect();
+    let logo_lines: Vec<Line> = if crate::tui::glyphs::current().fancy {
+        LOGO.iter()
+            .map(|row| {
+                Line::from(Span::styled(*row, Style::default().fg(colors.accent))).centered()
+            })
+            .collect()
+    } else {
+        vec![Line::from(Span::styled(
+            "N E T S P D",
+            Style::default().fg(colors.accent),
+        ))
+        .centered()]
+    };
     frame.render_widget(Paragraph::new(logo_lines), logo_area);
 
     frame.render_widget(

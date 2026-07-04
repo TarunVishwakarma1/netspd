@@ -3,7 +3,7 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Padding, Paragraph};
+use ratatui::widgets::{Block, Padding, Paragraph};
 use ratatui::Frame;
 
 use crate::app::state::PingView;
@@ -21,12 +21,16 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, view: &PingView, act
     } else {
         colors.border
     };
+    let glyphs = crate::tui::glyphs::current();
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_set(glyphs.border)
         .border_style(Style::default().fg(border_color))
         .padding(Padding::horizontal(1))
         .title(Line::from(vec![
-            Span::styled(" ⇄ ", Style::default().fg(colors.latency)),
+            Span::styled(
+                format!(" {} ", glyphs.latency),
+                Style::default().fg(colors.latency),
+            ),
             Span::styled(
                 "Ping ",
                 Style::default()

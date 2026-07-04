@@ -8,12 +8,45 @@ All notable changes to netspd are documented here. The format follows
 
 ### Added
 
+- `netspd serve`: a built-in speed test server (also answers LibreSpeed
+  paths), so one binary measures pod-to-pod, host-to-host and LAN links.
+  Pair with the new `--url` flag: `netspd --url http://peer:9516`.
+- Environment variable equivalents for the main flags (`NETSPD_URL`,
+  `NETSPD_SERVER`, `NETSPD_PROVIDER`, `NETSPD_INTERVAL`, `NETSPD_JSON`,
+  `NETSPD_PORT`, `NETSPD_BIND`) for container manifests.
+- Headless mode is now automatic when stdout is not a terminal
+  (containers, CI, pipes).
+
+- Bufferbloat measurement: latency is sampled during both transfer
+  phases and graded A+–F against idle latency (Waveform thresholds).
+  Shown on the results screen, in the share card, and exported in
+  JSON/CSV as `loaded_down_ms` / `loaded_up_ms` / `bufferbloat`.
+- `--compare N`: test the N nearest servers back to back and print a
+  ranked table (works with `--json` / `--csv`).
+- `--history`: dump stored results without running a test.
+- `-4` / `-6`: force IPv4 or IPv6 for measurements.
+- `--ascii` and `NO_COLOR` support: plain-character UI with no braille,
+  block art or colors for constrained terminals.
+- Mouse support: wheel scrolls selection lists, click confirms.
+- Editable settings screen: `↑↓` select, `←→` adjust within safe
+  bounds, `w` writes `config.toml`; theme changes apply live.
+- Trends screen upgraded to a real chart with axes and a per-server
+  filter (`←→`).
+
 - Ookla (speedtest.net) and Fast.com providers, selectable with
   `--provider`/`-p` or `provider` in the config file. Both are pure
   `Provider` implementations — the transfer engine is unchanged.
 - `custom` provider: test against your own servers (self-hosted
   backends, LAN machines) declared as `[[servers]]` entries, with any
   plain-HTTP endpoints.
+- CSV export: `--csv` prints a header plus one row per run — combined
+  with `--interval` it becomes a bandwidth logger.
+- Shareable results: `y` copies a three-line result card to the
+  clipboard (pbcopy / wl-copy / xclip / clip.exe).
+- Scheduled repeat testing with `--interval`/`-i` (e.g. `15m`) or
+  `repeat_interval` in config: the TUI auto-restarts with a countdown on
+  the results screen; headless mode becomes a watch loop that logs every
+  run and keeps going through transient failures.
 
 ### Fixed
 

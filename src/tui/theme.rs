@@ -163,6 +163,35 @@ pub fn parse_hex(value: &str) -> ConfigResult<Color> {
     ))
 }
 
+impl Theme {
+    /// Strips all colors for `NO_COLOR` terminals, keeping structure
+    /// legible through the terminal's own default foreground.
+    #[must_use]
+    pub fn without_colors(&self) -> Self {
+        let c = Color::Reset;
+        Self {
+            name: self.name.clone(),
+            colors: Colors {
+                background: c,
+                surface: c,
+                overlay: c,
+                text: c,
+                subtext: c,
+                muted: c,
+                border: c,
+                accent: c,
+                accent_alt: c,
+                success: c,
+                warning: c,
+                danger: c,
+                download: c,
+                upload: c,
+                latency: c,
+            },
+        }
+    }
+}
+
 /// Linearly blends two RGB colors; `t` is clamped to `0.0..=1.0`.
 ///
 /// Non-RGB colors cannot be blended and fall back to `a`.

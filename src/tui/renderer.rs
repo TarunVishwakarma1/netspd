@@ -276,7 +276,7 @@ fn sweep_position(t: f64) -> f64 {
 /// The footer hints for each screen.
 fn hints_for(screen: Screen) -> &'static [Hint] {
     match screen {
-        Screen::Splash => &[("q", "quit")],
+        Screen::Splash => &[("q", "quit"), ("?", "help")],
         Screen::Testing => &[
             ("q", "quit"),
             ("r", "restart"),
@@ -286,12 +286,19 @@ fn hints_for(screen: Screen) -> &'static [Hint] {
         ],
         Screen::Results => &[
             ("r", "run again"),
+            ("y", "copy result"),
             ("g", "trends"),
             ("s", "servers"),
-            ("t", "theme"),
             ("q", "quit"),
         ],
-        Screen::Help | Screen::Settings | Screen::Trends => &[("Esc", "back"), ("q", "quit")],
+        Screen::Help => &[("Esc", "back"), ("q", "quit")],
+        Screen::Settings => &[
+            ("↑↓", "select"),
+            ("←→", "adjust"),
+            ("w", "save"),
+            ("Esc", "back"),
+        ],
+        Screen::Trends => &[("←→", "filter server"), ("Esc", "back"), ("q", "quit")],
         Screen::ServerSelect | Screen::ThemeSelect => {
             &[("↑↓", "navigate"), ("Enter", "select"), ("Esc", "back")]
         }
