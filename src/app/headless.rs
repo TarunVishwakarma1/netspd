@@ -37,6 +37,10 @@ pub struct Options {
     pub interval: Option<std::time::Duration>,
     /// Test the N nearest servers and print a ranked comparison.
     pub compare: Option<usize>,
+    /// Exit with code 2 when download falls below this many Mbps.
+    pub fail_below: Option<f64>,
+    /// Write Prometheus metrics here after each completed run.
+    pub prom_textfile: Option<std::path::PathBuf>,
 }
 
 /// Runs headless: a single test, a server listing, or — with an
@@ -213,6 +217,13 @@ async fn test_once(
         match run_once(engine, &server, log).await {
             Ok(report) => {
                 history::record_report(&report);
+                if let Some(path) = &options.prom_textfile {
+                    if let Err(err) =
+                        super::prom::write_textfile(path, &report, engine.provider_name())
+                    {
+                        log(format!("failed to write {}: {err}", path.display()));
+                    }
+                }
                 let record = HistoryRecord::from_report(&report);
                 if options.json {
                     println!("{}", record.to_json().context("failed to encode report")?);
@@ -226,6 +237,16 @@ async fn test_once(
                         format_bps(report.upload.average_bps),
                         format_millis(report.latency.average_ms),
                     );
+                    println!("{}", super::verdict::verdict(&report));
+                }
+                if let Some(threshold) = options.fail_below {
+                    let mbps = report.download.average_bps / 1_000_000.0;
+                    if mbps < threshold {
+                        // Distinct exit code for alerting: 1 = test
+                        // failed, 2 = test ran but missed the threshold.
+                        eprintln!("download {mbps:.1} Mbps below threshold {threshold} Mbps");
+                        std::process::exit(2);
+                    }
                 }
                 return Ok(());
             }

@@ -75,6 +75,16 @@ pub struct Cli {
     /// Force IPv6 for measurements
     #[arg(short = '6', long = "ipv6")]
     pub ipv6: bool,
+
+    /// Exit with code 2 when download falls below this many Mbps
+    /// (for CI checks and alerting)
+    #[arg(long, value_name = "MBPS", env = "NETSPD_FAIL_BELOW")]
+    pub fail_below: Option<f64>,
+
+    /// Write Prometheus metrics to this node_exporter textfile after
+    /// each completed run
+    #[arg(long, value_name = "PATH", env = "NETSPD_PROM_TEXTFILE")]
+    pub prom_textfile: Option<std::path::PathBuf>,
 }
 
 /// Alternate modes.
@@ -90,6 +100,27 @@ pub enum Commands {
         #[arg(long, default_value = "0.0.0.0", env = "NETSPD_BIND")]
         bind: String,
     },
+    /// Print shell completions to stdout
+    Completions {
+        /// Target shell
+        shell: clap_complete::Shell,
+    },
+    /// Print the man page (roff) to stdout
+    Man,
+}
+
+/// Prints completions for `shell`.
+pub fn print_completions(shell: clap_complete::Shell) {
+    use clap::CommandFactory;
+    let mut command = Cli::command();
+    clap_complete::generate(shell, &mut command, "netspd", &mut std::io::stdout());
+}
+
+/// Prints the roff man page.
+pub fn print_man() -> std::io::Result<()> {
+    use clap::CommandFactory;
+    let man = clap_mangen::Man::new(Cli::command());
+    man.render(&mut std::io::stdout())
 }
 
 impl Cli {

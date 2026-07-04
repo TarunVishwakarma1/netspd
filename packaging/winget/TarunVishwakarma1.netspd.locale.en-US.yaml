@@ -1,0 +1,18 @@
+PackageIdentifier: TarunVishwakarma1.netspd
+PackageVersion: 0.1.3
+PackageLocale: en-US
+Publisher: Tarun Vishwakarma
+PackageName: netspd
+License: MIT
+LicenseUrl: https://github.com/TarunVishwakarma1/netspd/blob/main/LICENSE
+ShortDescription: Beautiful network speed test for the terminal, with a hypercar tachometer
+PackageUrl: https://github.com/TarunVishwakarma1/netspd
+Moniker: netspd
+Tags:
+  - speedtest
+  - network
+  - tui
+  - terminal
+  - bandwidth
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

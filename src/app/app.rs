@@ -44,6 +44,7 @@ pub struct App {
     engine_rx: Option<mpsc::Receiver<EngineEvent>>,
     cancel: CancellationToken,
     failover_attempts: usize,
+    prom_textfile: Option<std::path::PathBuf>,
 }
 
 impl App {
@@ -58,7 +59,15 @@ impl App {
             engine_rx: None,
             cancel: CancellationToken::new(),
             failover_attempts: 0,
+            prom_textfile: None,
         }
+    }
+
+    /// Also write Prometheus metrics after each completed run.
+    #[must_use]
+    pub fn with_prom_textfile(mut self, path: Option<std::path::PathBuf>) -> Self {
+        self.prom_textfile = path;
+        self
     }
 
     /// Runs the event loop until quit, drawing at most one frame per tick.
@@ -137,6 +146,10 @@ impl App {
                         self.failover_attempts = 0;
                         // Best-effort persistence; the UI never blocks on it.
                         history::record_report(report);
+                        if let Some(path) = &self.prom_textfile {
+                            let _ =
+                                super::prom::write_textfile(path, report, self.state.provider_name);
+                        }
                     }
                     self.state.apply_engine_event(engine_event);
                 }

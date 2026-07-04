@@ -74,7 +74,9 @@ impl Default for TransferConfig {
             connections: 4,
             sample_interval: Duration::from_millis(100),
             ema_alpha: 0.2,
-            upload_chunk_bytes: 512 * 1024,
+            // Large enough that request-per-body round trips don't cap
+            // throughput on high-latency links.
+            upload_chunk_bytes: 2 * 1024 * 1024,
             connect_timeout: Duration::from_secs(15),
             lead_in: Duration::from_millis(1200),
         }

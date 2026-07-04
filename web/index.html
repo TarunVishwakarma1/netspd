@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>netspd — network speed, beautifully measured</title>
+<meta name="description" content="A beautiful network speed test for your terminal: hypercar tachometer, bufferbloat grade, JSON/CSV output, pod-to-pod testing. One static binary.">
+<style>
+  :root {
+    --bg: #16161e; --surface: #1f1f2b; --text: #c8ccd8; --sub: #9298ab;
+    --accent: #7aa2f7; --accent2: #bb9af7; --green: #9ece6a; --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); line-height: 1.6; }
+  main { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  h1 { font-size: 2.6rem; letter-spacing: -1px; }
+  h1 .dot { color: var(--accent); }
+  .tag { color: var(--sub); margin: 4px 0 32px; }
+  img.demo { width: 100%; border-radius: 10px; border: 1px solid #33344a; margin: 8px 0 40px; }
+  h2 { color: var(--accent); font-size: 1.05rem; margin: 40px 0 12px; text-transform: uppercase; letter-spacing: 2px; }
+  pre { background: var(--surface); border: 1px solid #33344a; border-radius: 8px; padding: 14px 18px; overflow-x: auto; margin: 10px 0; }
+  code { color: var(--green); }
+  pre .c { color: var(--sub); }
+  ul.feat { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; }
+  ul.feat li::before { content: "▸ "; color: var(--accent2); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { margin-top: 64px; color: var(--sub); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>netspd<span class="dot">_</span></h1>
+  <p class="tag">network speed, beautifully measured — in your terminal</p>
+
+  <img class="demo" src="https://raw.githubusercontent.com/TarunVishwakarma1/netspd/main/assets/recording.gif" alt="netspd running a speed test with an animated tachometer dial">
+
+  <h2>Install</h2>
+  <pre><span class="c"># macOS / Linux (Homebrew)</span>
+<code>brew tap TarunVishwakarma1/tap && brew install netspd</code>
+
+<span class="c"># Rust</span>
+<code>cargo install netspd</code>
+
+<span class="c"># Nix</span>
+<code>nix run github:TarunVishwakarma1/netspd</code>
+
+<span class="c"># Windows / Linux binaries</span>
+<code>https://github.com/TarunVishwakarma1/netspd/releases/latest</code></pre>
+
+  <h2>Run</h2>
+  <pre><code>netspd</code>                          <span class="c"># the full experience</span>
+<code>netspd --json | jq</code>              <span class="c"># scripts and pipelines</span>
+<code>netspd serve</code>  +  <code>netspd --url http://peer:9516</code>   <span class="c"># pod-to-pod / LAN</span></pre>
+
+  <h2>Why netspd</h2>
+  <ul class="feat">
+    <li>Hypercar tachometer with spring-physics needle</li>
+    <li>Bufferbloat grade (A+–F) — latency under load</li>
+    <li>Plain-language verdict of what your link can do</li>
+    <li>LibreSpeed, Ookla, Fast.com or your own servers</li>
+    <li>Client <em>and</em> server in one static binary</li>
+    <li>JSON, CSV, Prometheus textfile output</li>
+    <li>History, trends chart, scheduled repeat runs</li>
+    <li>Themes, mouse support, 80×24 → 4K, --ascii</li>
+  </ul>
+
+  <h2>Links</h2>
+  <p>
+    <a href="https://github.com/TarunVishwakarma1/netspd">GitHub</a> ·
+    <a href="https://crates.io/crates/netspd">crates.io</a> ·
+    <a href="https://github.com/TarunVishwakarma1/netspd/releases/latest">Releases</a> ·
+    <a href="https://github.com/TarunVishwakarma1/netspd#containers-and-kubernetes">Kubernetes guide</a>
+  </p>
+
+  <footer>MIT licensed · built in Rust with ratatui</footer>
+</main>
+</body>
+</html>

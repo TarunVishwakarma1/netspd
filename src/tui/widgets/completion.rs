@@ -18,15 +18,17 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, report: &TestReport)
     }
     let colors = &theme.colors;
 
-    let [title_area, _, speeds_area, _, latency_area, totals_area] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Length(3),
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Length(1),
-    ])
-    .areas(area);
+    let [title_area, _, speeds_area, _, latency_area, verdict_area, totals_area] =
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(3),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(area);
 
     frame.render_widget(
         Paragraph::new(
@@ -101,6 +103,17 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, report: &TestReport)
     frame.render_widget(
         Paragraph::new(Line::from(latency_spans).centered()),
         latency_area,
+    );
+
+    frame.render_widget(
+        Paragraph::new(
+            Line::from(Span::styled(
+                crate::app::verdict::verdict(report),
+                Style::default().fg(colors.subtext),
+            ))
+            .centered(),
+        ),
+        verdict_area,
     );
 
     let transferred = report.download.bytes + report.upload.bytes;

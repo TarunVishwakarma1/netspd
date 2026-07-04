@@ -14,13 +14,14 @@ pub fn share_text(report: &TestReport, provider: &str) -> String {
         .map(|b| format!("  bufferbloat {}", b.grade.label()))
         .unwrap_or_default();
     format!(
-        "netspd — {}\n↓ {}  ↑ {}  ping {} (jitter {}, loss {:.0}%){bloat}\nvia {} · https://github.com/TarunVishwakarma1/netspd",
+        "netspd — {}\n↓ {}  ↑ {}  ping {} (jitter {}, loss {:.0}%){bloat}\n{}\nvia {} · https://github.com/TarunVishwakarma1/netspd",
         report.server_name,
         format_bps(report.download.average_bps),
         format_bps(report.upload.average_bps),
         format_millis(report.latency.average_ms),
         format_millis(report.latency.jitter_ms),
         report.latency.packet_loss_pct,
+        super::verdict::verdict(report),
         provider,
     )
 }

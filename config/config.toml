@@ -29,8 +29,9 @@ duration_secs = 10
 connections = 4
 # Per-request timeout, in seconds.
 timeout_secs = 15
-# Size of each upload body, in kilobytes.
-upload_chunk_kb = 512
+# Size of each upload body, in kilobytes. Larger bodies keep uploads
+# fast on high-latency links.
+upload_chunk_kb = 2048
 
 # Custom servers override the provider's server discovery.
 # Uncomment to test against a self-hosted LibreSpeed backend.

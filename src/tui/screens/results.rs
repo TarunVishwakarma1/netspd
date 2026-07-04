@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
     let bp = breakpoint(area);
 
     if bp == Breakpoint::Compact || area.height < 20 {
-        let summary = centered(area, area.width.min(72), 8);
+        let summary = centered(area, area.width.min(72), 9);
         completion::render(frame, summary, theme, report);
         render_repeat_countdown(frame, area, theme, state);
         return;
@@ -29,7 +29,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
 
     let content = centered(area, area.width.min(96), 18);
     let [summary_area, _, cards_area] = Layout::vertical([
-        Constraint::Length(8),
+        Constraint::Length(9),
         Constraint::Length(2),
         Constraint::Length(7),
     ])

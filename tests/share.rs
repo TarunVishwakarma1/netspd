@@ -40,6 +40,8 @@ fn share_card_contains_the_headline_figures() {
     assert!(card.contains("ping 141 ms"));
     assert!(card.contains("loss 0%"));
     assert!(card.contains("via LibreSpeed"));
-    // Compact: three lines, ready for a chat message.
-    assert_eq!(card.lines().count(), 3);
+    // Plain-language verdict rides along.
+    assert!(card.contains("4K streaming"));
+    // Compact: four lines, ready for a chat message.
+    assert_eq!(card.lines().count(), 4);
 }

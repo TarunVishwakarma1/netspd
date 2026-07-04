@@ -21,6 +21,8 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 - **Live metrics** — current / average / peak speed, transferred bytes, ETA, elapsed time
 - **Latency analysis** — multiple samples, outlier trimming, jitter, real ICMP packet loss (graceful fallback where ICMP is unavailable)
 - **Bufferbloat grade** — latency is sampled *while* the link is saturated and graded A+–F against idle, per direction — the number Ookla's CLI doesn't show you
+- **Plain-language verdict** — every result explains itself: *"Good for 4K streaming · video calls may stutter under load"*
+- **Monitoring-ready** — Prometheus textfile output (`--prom-textfile`), threshold exit codes (`--fail-below`), JSON/CSV, history
 - **Four providers** — LibreSpeed (default), Ookla speedtest.net, Netflix Fast.com, and `custom` for your own servers (self-hosted backends, LAN testing); switch with `--provider` or config
 - **Client *and* server in one binary** — `netspd serve` + `netspd --url` measure pod-to-pod, host-to-host or LAN links with nothing else installed; auto-headless in containers, env-var flags for K8s manifests
 - **Smart server discovery** — health-probes the server list, drops dead servers, auto-selects the nearest
@@ -54,6 +56,12 @@ brew install netspd
 
 Download the archive for your platform from the [latest release](https://github.com/TarunVishwakarma1/netspd/releases/latest), unpack it and put `netspd` on your `PATH`.
 
+### Other channels
+
+- **Nix**: `nix run github:TarunVishwakarma1/netspd`
+- **Debian/RPM**: `.deb` and `.rpm` files on the [releases page](https://github.com/TarunVishwakarma1/netspd/releases/latest)
+- **Scoop / winget / AUR**: ready-to-submit manifests in [`packaging/`](packaging)
+
 ### From source
 
 ```sh
@@ -82,6 +90,9 @@ netspd --history --csv     # dump stored results, no test
 netspd --ascii -4          # ASCII UI, IPv4 only
 netspd serve               # built-in speed test server on :9516
 netspd --url http://host:9516   # test against a `netspd serve` peer
+netspd --fail-below 50     # exit code 2 under 50 Mbps (CI / alerting)
+netspd --prom-textfile /var/lib/node_exporter/netspd.prom   # Prometheus
+netspd completions zsh     # shell completions; also: netspd man
 ```
 
 The test starts automatically: ping → download → upload, then a results summary. If a server fails mid-test, netspd automatically retries with the next-nearest one (unless you pinned a server with `--server`).
@@ -192,7 +203,7 @@ netspd is a single static binary that plays **both roles**: client and server. T
 Add it to any image (the musl binary has zero runtime dependencies):
 
 ```dockerfile
-ARG NETSPD_VERSION=v0.1.3
+ARG NETSPD_VERSION=v0.1.4
 ADD https://github.com/TarunVishwakarma1/netspd/releases/download/${NETSPD_VERSION}/netspd-${NETSPD_VERSION}-x86_64-unknown-linux-musl.tar.gz /tmp/
 RUN tar -xzf /tmp/netspd-*.tar.gz --strip-components=1 -C /usr/local/bin --wildcards '*/netspd' && rm /tmp/netspd-*.tar.gz
 ```
@@ -266,9 +277,21 @@ netspd follows clean architecture with strict one-way dependencies:
 
 - The **engine** emits strongly-typed `EngineEvent`s over a channel and never imports Ratatui — it is directly reusable from a CLI, GUI, REST API or as a library.
 - **Providers** implement one trait (`Provider`); adding a new speed test network touches nothing else. LibreSpeed, Ookla and Fast.com are each ~100 lines of server discovery — the transfer engine is shared.
-- Note: Ookla runs over the servers' long-standing HTTP endpoints (the classic `speedtest-cli` protocol), not Ookla's newer socket protocol — upload figures may read lower than the official client on high-latency links.
 - **State** is plain data mutated only by reducers; the renderer just draws it.
 - **Metrics** are pure, deterministic calculators, each independently unit-tested.
+
+## Use as a library
+
+The engine has no UI dependencies — embed real speed tests in your own Rust application:
+
+```rust
+let provider = netspd::engine::providers::create(ProviderKind::Librespeed, vec![])?;
+let engine = netspd::engine::Engine::new(provider, EngineConfig::default())?;
+let servers = engine.load_servers().await?;
+// stream typed EngineEvents while the test runs
+```
+
+See [`examples/embed.rs`](examples/embed.rs) (`cargo run --example embed`) and the [API docs](https://docs.rs/netspd).
 
 ## Development
 

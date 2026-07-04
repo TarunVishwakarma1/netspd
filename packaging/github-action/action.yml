@@ -1,0 +1,60 @@
+name: "netspd speed test"
+description: "Measure network speed, latency and bufferbloat from a CI runner or against your own endpoints"
+author: "TarunVishwakarma1"
+branding:
+  icon: "activity"
+  color: "blue"
+
+inputs:
+  version:
+    description: "netspd release to use"
+    default: "v0.1.3"
+  url:
+    description: "Test against this server URL (a `netspd serve` peer or LibreSpeed backend) instead of public servers"
+    default: ""
+  provider:
+    description: "Provider: librespeed, ookla, fast or custom"
+    default: "librespeed"
+  duration:
+    description: "Seconds per transfer phase (3-60)"
+    default: "5"
+  fail-below:
+    description: "Fail the step when download is below this many Mbps (empty = never fail)"
+    default: ""
+
+outputs:
+  json:
+    description: "The full test report as JSON"
+    value: ${{ steps.run.outputs.json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install netspd
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          Linux-X64)  target="x86_64-unknown-linux-musl" ;;
+          macOS-ARM64) target="aarch64-apple-darwin" ;;
+          macOS-X64)  target="x86_64-apple-darwin" ;;
+          *) echo "unsupported runner: ${{ runner.os }}-${{ runner.arch }}" >&2; exit 1 ;;
+        esac
+        version="${{ inputs.version }}"
+        curl -fsSL "https://github.com/TarunVishwakarma1/netspd/releases/download/${version}/netspd-${version}-${target}.tar.gz" \
+          | tar -xz --strip-components=1 -C /tmp "netspd-${version}-${target}/netspd"
+        sudo install -m755 /tmp/netspd /usr/local/bin/netspd 2>/dev/null \
+          || install -m755 /tmp/netspd "$HOME/netspd-bin" && export PATH="$HOME:$PATH"
+        netspd --version || /usr/local/bin/netspd --version
+
+    - name: Run speed test
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        args=(--json -d "${{ inputs.duration }}" -p "${{ inputs.provider }}")
+        [ -n "${{ inputs.url }}" ] && args+=(--url "${{ inputs.url }}")
+        [ -n "${{ inputs['fail-below'] }}" ] && args+=(--fail-below "${{ inputs['fail-below'] }}")
+        result="$(netspd "${args[@]}")"
+        echo "$result"
+        echo "json=$result" >> "$GITHUB_OUTPUT"

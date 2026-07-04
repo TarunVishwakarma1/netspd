@@ -12,6 +12,8 @@ pub mod controller;
 pub mod event;
 pub mod headless;
 pub mod history;
+pub mod prom;
 pub mod serve;
 pub mod share;
 pub mod state;
+pub mod verdict;

@@ -17,8 +17,19 @@ use netspd::tui::theme::Theme;
 async fn main() -> anyhow::Result<()> {
     let mut cli = Cli::parse();
 
-    if let Some(netspd::app::cli::Commands::Serve { port, bind }) = &cli.command {
-        return netspd::app::serve::run(bind, *port).await;
+    match &cli.command {
+        Some(netspd::app::cli::Commands::Serve { port, bind }) => {
+            return netspd::app::serve::run(bind, *port).await;
+        }
+        Some(netspd::app::cli::Commands::Completions { shell }) => {
+            netspd::app::cli::print_completions(*shell);
+            return Ok(());
+        }
+        Some(netspd::app::cli::Commands::Man) => {
+            netspd::app::cli::print_man().context("failed to render man page")?;
+            return Ok(());
+        }
+        None => {}
     }
 
     // Inside containers and pipelines there is no terminal to draw on;
@@ -85,6 +96,8 @@ async fn main() -> anyhow::Result<()> {
             list_servers: cli.list_servers,
             interval: repeat,
             compare: cli.compare,
+            fail_below: cli.fail_below,
+            prom_textfile: cli.prom_textfile,
         };
         return headless::run(engine, options).await;
     }
@@ -106,7 +119,8 @@ async fn main() -> anyhow::Result<()> {
     );
     state.preferred_server = cli.server;
     state.repeat_every = repeat;
-    let app = App::new(engine, state, renderer, settings.tick_rate());
+    let app = App::new(engine, state, renderer, settings.tick_rate())
+        .with_prom_textfile(cli.prom_textfile);
 
     install_panic_hook();
     let mut tui = Tui::new().context("failed to initialize terminal")?;

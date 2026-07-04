@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Bytes;
-use reqwest::{Body, Client};
+use reqwest::Client;
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -20,14 +20,15 @@ use super::transfer;
 /// Pause between retries after a failed request.
 const RETRY_DELAY: Duration = Duration::from_millis(250);
 
-/// Size of the individual body chunks streamed to the server.
-const STREAM_CHUNK: usize = 64 * 1024;
-
 /// Runs the upload phase.
 ///
-/// One incompressible payload is generated once and shared by every worker
-/// through cheap reference-counted [`Bytes`] slices — no per-request
-/// allocation. Bytes are counted as the request body streams out.
+/// One incompressible payload is generated once and shared by every
+/// worker through cheap reference-counted [`Bytes`] clones. Bodies are
+/// sent with an explicit `Content-Length` — never chunked — because
+/// widely-deployed speed test backends (Ookla's `upload.php` among
+/// them) hang forever on chunked requests. Bytes are counted as each
+/// request completes; with multi-megabyte bodies across several
+/// connections that still lands several updates per sampling interval.
 pub async fn run_upload(
     client: &Client,
     url: &str,
@@ -38,13 +39,13 @@ pub async fn run_upload(
     let counter = Arc::new(AtomicU64::new(0));
     let workers_cancel = cancel.child_token();
     let mut workers = JoinSet::new();
-    let chunks = payload_chunks(config.upload_chunk_bytes.max(STREAM_CHUNK));
+    let payload = build_payload(config.upload_chunk_bytes.max(64 * 1024));
 
     for _ in 0..config.connections.max(1) {
         workers.spawn(worker(
             client.clone(),
             url.to_owned(),
-            chunks.clone(),
+            payload.clone(),
             Arc::clone(&counter),
             workers_cancel.clone(),
         ));
@@ -62,23 +63,22 @@ pub async fn run_upload(
     .await
 }
 
-/// A single upload connection: POST the payload as a counted stream,
-/// repeat until cancelled.
+/// A single upload connection: POST the payload with a known length,
+/// count it on success, repeat until cancelled.
 async fn worker(
     client: Client,
     url: String,
-    chunks: Vec<Bytes>,
+    payload: Bytes,
     counter: Arc<AtomicU64>,
     cancel: CancellationToken,
 ) {
     while !cancel.is_cancelled() {
-        // Cloning the chunk vector is cheap: each element is a
-        // reference-counted slice of the one shared payload buffer.
-        let body = counting_body(chunks.clone(), &counter);
+        // `Bytes` clones are reference-counted: no copy, and reqwest
+        // knows the exact size, so the request carries Content-Length.
         let request = client
             .post(&url)
             .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
-            .body(body)
+            .body(payload.clone())
             .send();
 
         let response = tokio::select! {
@@ -86,32 +86,26 @@ async fn worker(
             result = request => result,
         };
 
-        if response.is_err() {
-            tokio::select! {
-                () = cancel.cancelled() => return,
-                () = tokio::time::sleep(RETRY_DELAY) => {}
+        match response {
+            Ok(response) if response.status().is_success() => {
+                counter.fetch_add(payload.len() as u64, Ordering::Relaxed);
+            }
+            // Failed request or error status: back off briefly and retry.
+            Ok(_) | Err(_) => {
+                tokio::select! {
+                    () = cancel.cancelled() => return,
+                    () = tokio::time::sleep(RETRY_DELAY) => {}
+                }
             }
         }
     }
 }
 
-/// Wraps the shared payload in a stream that bumps `counter` as each chunk
-/// is pulled by the HTTP client, giving fine-grained progress without
-/// copying the payload.
-fn counting_body(chunks: Vec<Bytes>, counter: &Arc<AtomicU64>) -> Body {
-    let counter = Arc::clone(counter);
-    let stream = futures_util::stream::iter(chunks.into_iter().map(move |chunk| {
-        counter.fetch_add(chunk.len() as u64, Ordering::Relaxed);
-        Ok::<Bytes, std::io::Error>(chunk)
-    }));
-    Body::wrap_stream(stream)
-}
-
-/// Builds the shared upload payload as zero-copy slices of one buffer.
+/// Builds the shared upload payload.
 ///
 /// The payload is pseudo-random (xorshift) so transparent compression
 /// anywhere on the path cannot inflate the measured speed.
-fn payload_chunks(total_bytes: usize) -> Vec<Bytes> {
+fn build_payload(total_bytes: usize) -> Bytes {
     let mut data = vec![0_u8; total_bytes];
     let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
     for slot in &mut data {
@@ -120,9 +114,5 @@ fn payload_chunks(total_bytes: usize) -> Vec<Bytes> {
         state ^= state << 17;
         *slot = (state & 0xff) as u8;
     }
-    let payload = Bytes::from(data);
-    (0..payload.len())
-        .step_by(STREAM_CHUNK)
-        .map(|start| payload.slice(start..payload.len().min(start + STREAM_CHUNK)))
-        .collect()
+    Bytes::from(data)
 }
