@@ -30,6 +30,14 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 
 ## Installation
 
+### Cargo
+
+```sh
+cargo install netspd
+```
+
+Compiles from [crates.io](https://crates.io/crates/netspd); requires Rust 1.88 or newer.
+
 ### Homebrew (macOS / Linux)
 
 ```sh
