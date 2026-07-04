@@ -8,6 +8,6 @@ NestedInstallerFiles:
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.4/netspd-v0.1.4-x86_64-pc-windows-msvc.zip
-    InstallerSha256: E74ACBD8E94EBF9347B5DF5599F5ABF449DE54B5944E767BC4D063AFF9F69B40
+    InstallerSha256: B20DE898F69E0F8C8D571EF2B6467BDED8F4CF424C172DE4BBE9883FEDF21747
 ManifestType: installer
 ManifestVersion: 1.6.0

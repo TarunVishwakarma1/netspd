@@ -4,7 +4,7 @@
     "homepage": "https://github.com/TarunVishwakarma1/netspd",
     "license": "MIT",
     "url": "https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.4/netspd-v0.1.4-x86_64-pc-windows-msvc.zip",
-    "hash": "e74acbd8e94ebf9347b5df5599f5abf449de54b5944e767bc4d063aff9f69b40",
+    "hash": "b20de898f69e0f8c8d571ef2b6467bded8f4cf424c172de4bbe9883fedf21747",
     "extract_dir": "netspd-v0.1.4-x86_64-pc-windows-msvc",
     "bin": "netspd.exe",
     "checkver": {

@@ -8,7 +8,7 @@ url="https://github.com/TarunVishwakarma1/netspd"
 license=('MIT')
 makedepends=('cargo')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('bc204cd40d495c7e476db9a79e0534492f241fbff7447f4c707ad315db151055')
+sha256sums=('a8da46179bad5a6b715cd8e1f96acfd50173938545984259920e1914b3d9b5dd')
 
 prepare() {
     cd "$pkgname-$pkgver"
