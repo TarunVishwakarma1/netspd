@@ -19,7 +19,7 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 
 - **Hypercar tachometer** — heat-gradient value band, hatched redline, spring-physics needle with afterglow, ignition sweep before each phase, peak ghost notch, latency sub-dial; twin instrument cluster on wide terminals
 - **Live metrics** — current / average / peak speed, transferred bytes, ETA, elapsed time
-- **Latency analysis** — multiple samples, outlier trimming, jitter, packet-loss ready
+- **Latency analysis** — multiple samples, outlier trimming, jitter, real ICMP packet loss (graceful fallback where ICMP is unavailable)
 - **Smart server discovery** — health-probes the public server list, drops dead servers, auto-selects the nearest
 - **Headless mode** — `--no-tui` for scripts and cron, `--json` for machine-readable reports
 - **Result history** — every run appended as JSON lines to your data directory
@@ -29,6 +29,13 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 - **Graceful everywhere** — cancellation, retries, timeouts; network failures never panic
 
 ## Installation
+
+### Homebrew (macOS / Linux)
+
+```sh
+brew tap TarunVishwakarma1/tap
+brew install netspd
+```
 
 ### Prebuilt binaries
 
@@ -166,7 +173,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
 - [x] Trend sparklines over the stored history (`g`)
 - [x] `--server`, `--list-servers`, `--duration`, `--connections` flags
 - [x] Automatic failover to the next server on failure
-- [ ] Packet loss via ICMP (the reporting model is already in place)
+- [x] Packet loss via ICMP echo probing
+- [x] Homebrew tap
 - [ ] Ookla and Fast.com providers
 - [ ] Scheduled repeat testing
 

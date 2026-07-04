@@ -7,6 +7,7 @@
 pub mod client;
 pub mod download;
 pub mod health;
+pub mod icmp;
 pub mod info;
 pub mod ping;
 mod transfer;

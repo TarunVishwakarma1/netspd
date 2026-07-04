@@ -8,8 +8,8 @@ use crate::errors::EngineResult;
 
 use super::engine::EngineConfig;
 use super::event::{emit, EngineEvent};
-use super::models::{Server, TestPhase, TestReport};
-use super::network::{download, ping, upload};
+use super::models::{LatencyStats, Server, TestPhase, TestReport};
+use super::network::{download, icmp, ping, upload};
 
 /// Runs ping, download and upload in sequence against one server and
 /// assembles the final report.
@@ -31,8 +31,16 @@ pub(crate) async fn run_sequence(
         },
     )
     .await?;
-    let latency =
-        ping::measure_latency(client, &server.endpoints.ping, &config.ping, events, cancel).await?;
+    // HTTP latency and ICMP loss probe run side by side; ICMP is
+    // best-effort and refines the loss figure when sockets allow it.
+    let (latency, icmp_loss) = tokio::join!(
+        ping::measure_latency(client, &server.endpoints.ping, &config.ping, events, cancel),
+        measure_icmp_loss(server, cancel),
+    );
+    let mut latency: LatencyStats = latency?;
+    if let Some(loss) = icmp_loss {
+        latency.packet_loss_pct = loss;
+    }
     emit(events, EngineEvent::PingFinished { stats: latency }).await?;
 
     emit(
@@ -91,6 +99,12 @@ pub(crate) async fn run_sequence(
         download: download_stats,
         upload: upload_stats,
     })
+}
+
+/// Runs the ICMP loss probe against the server's host, when derivable.
+async fn measure_icmp_loss(server: &Server, cancel: &CancellationToken) -> Option<f64> {
+    let host = icmp::host_of_url(&server.endpoints.ping)?;
+    icmp::measure_loss(&host, cancel).await
 }
 
 /// Waits out the configured lead-in between a phase announcement and its

@@ -8,6 +8,10 @@ All notable changes to netspd are documented here. The format follows
 
 ### Added
 
+- Real packet loss measurement: a burst of ICMP echoes runs alongside the
+  HTTP ping phase and refines the loss figure. Falls back to the
+  HTTP-based estimate wherever ICMP sockets are unavailable or filtered.
+
 - Trends screen (`g`): download/upload sparklines and last/avg/best
   figures across all stored runs.
 - CLI flags via clap: `--server`/`-s` (pick by name or host substring),
