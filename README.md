@@ -206,7 +206,7 @@ netspd is a single static binary that plays **both roles**: client and server. T
 Add it to any image (the musl binary has zero runtime dependencies):
 
 ```dockerfile
-ARG NETSPD_VERSION=v0.1.4
+ARG NETSPD_VERSION=v0.1.5
 ADD https://github.com/TarunVishwakarma1/netspd/releases/download/${NETSPD_VERSION}/netspd-${NETSPD_VERSION}-x86_64-unknown-linux-musl.tar.gz /tmp/
 RUN tar -xzf /tmp/netspd-*.tar.gz --strip-components=1 -C /usr/local/bin --wildcards '*/netspd' && rm /tmp/netspd-*.tar.gz
 ```
