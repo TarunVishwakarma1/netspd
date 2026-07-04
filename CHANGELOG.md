@@ -8,6 +8,18 @@ All notable changes to netspd are documented here. The format follows
 
 ### Added
 
+- Ookla (speedtest.net) and Fast.com providers, selectable with
+  `--provider`/`-p` or `provider` in the config file. Both are pure
+  `Provider` implementations — the transfer engine is unchanged.
+- `custom` provider: test against your own servers (self-hosted
+  backends, LAN machines) declared as `[[servers]]` entries, with any
+  plain-HTTP endpoints.
+
+### Fixed
+
+- Headless mode no longer drops the final transfer summary line when the
+  engine finishes before the last events are consumed.
+
 - Real packet loss measurement: a burst of ICMP echoes runs alongside the
   HTTP ping phase and refines the loss figure. Falls back to the
   HTTP-based estimate wherever ICMP sockets are unavailable or filtered.

@@ -20,7 +20,8 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 - **Hypercar tachometer** — heat-gradient value band, hatched redline, spring-physics needle with afterglow, ignition sweep before each phase, peak ghost notch, latency sub-dial; twin instrument cluster on wide terminals
 - **Live metrics** — current / average / peak speed, transferred bytes, ETA, elapsed time
 - **Latency analysis** — multiple samples, outlier trimming, jitter, real ICMP packet loss (graceful fallback where ICMP is unavailable)
-- **Smart server discovery** — health-probes the public server list, drops dead servers, auto-selects the nearest
+- **Four providers** — LibreSpeed (default), Ookla speedtest.net, Netflix Fast.com, and `custom` for your own servers (self-hosted backends, LAN testing); switch with `--provider` or config
+- **Smart server discovery** — health-probes the server list, drops dead servers, auto-selects the nearest
 - **Headless mode** — `--no-tui` for scripts and cron, `--json` for machine-readable reports
 - **Result history** — every run appended as JSON lines to your data directory
 - **Streaming transfers** — nothing buffered in memory; parallel connections with EMA smoothing
@@ -67,6 +68,7 @@ netspd --no-tui            # headless: progress on stderr, summary on stdout
 netspd --json              # headless: report as one JSON object on stdout
 netspd --list-servers      # print reachable servers, nearest first
 netspd -s tokyo            # pick a server by name/host substring
+netspd -p ookla            # provider: librespeed (default) | ookla | fast | custom
 netspd -d 5 -c 8           # 5-second phases over 8 connections
 ```
 
@@ -123,7 +125,7 @@ Every key is optional; see [`config/config.toml`](config/config.toml) for the an
 ```toml
 theme = "catppuccin"       # default | nord | dracula | catppuccin | gruvbox
 refresh_rate = 30          # UI frames per second (1..=60)
-provider = "librespeed"
+provider = "librespeed"    # librespeed | ookla | fast
 animation_speed = 1.0
 
 [engine]
@@ -137,6 +139,35 @@ url = "https://speedtest.example.com/backend/"
 ```
 
 Custom themes go in `~/.config/netspd/themes/*.toml` — copy any file from [`assets/themes/`](assets/themes) as a starting point.
+
+### Your own servers and LAN testing
+
+`provider = "custom"` tests against exactly the servers you declare — a self-hosted backend, an office box, or a machine on your LAN. The endpoints just need to speak plain HTTP:
+
+- **ping** — answers GET with any 2xx, quickly
+- **download** — answers GET with a large body (netspd streams and loops requests)
+- **upload** — accepts POST bodies with a 2xx
+
+A stock [LibreSpeed container](https://github.com/librespeed/speedtest) on the target machine provides all three:
+
+```sh
+docker run -d -p 8080:80 ghcr.io/librespeed/speedtest   # on the LAN machine
+```
+
+```toml
+provider = "custom"
+
+[[servers]]
+name = "Office LAN"
+url = "http://192.168.1.50:8080/backend/"
+# paths default to LibreSpeed's (garbage.php / empty.php); override for
+# other servers:
+# download_path = "big-file.bin"
+# upload_path   = "upload-sink"
+# ping_path     = "health"
+```
+
+Then `netspd -p custom`. Loopback sanity check: this setup measures ~11 Gbps against a local process, so the meter itself won't be your bottleneck on 10GbE.
 
 ## Architecture
 
@@ -160,7 +191,8 @@ netspd follows clean architecture with strict one-way dependencies:
 ```
 
 - The **engine** emits strongly-typed `EngineEvent`s over a channel and never imports Ratatui — it is directly reusable from a CLI, GUI, REST API or as a library.
-- **Providers** implement one trait (`Provider`); adding a new speed test network touches nothing else.
+- **Providers** implement one trait (`Provider`); adding a new speed test network touches nothing else. LibreSpeed, Ookla and Fast.com are each ~100 lines of server discovery — the transfer engine is shared.
+- Note: Ookla runs over the servers' long-standing HTTP endpoints (the classic `speedtest-cli` protocol), not Ookla's newer socket protocol — upload figures may read lower than the official client on high-latency links.
 - **State** is plain data mutated only by reducers; the renderer just draws it.
 - **Metrics** are pure, deterministic calculators, each independently unit-tested.
 
@@ -183,7 +215,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
 - [x] Automatic failover to the next server on failure
 - [x] Packet loss via ICMP echo probing
 - [x] Homebrew tap
-- [ ] Ookla and Fast.com providers
+- [x] Ookla and Fast.com providers
 - [ ] Scheduled repeat testing
 
 ## License

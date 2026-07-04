@@ -2,10 +2,16 @@
 
 use clap::Parser;
 
+use crate::engine::providers::ProviderKind;
+
 /// A beautiful network speed test for your terminal.
 #[derive(Debug, Parser)]
 #[command(name = "netspd", version, about)]
 pub struct Cli {
+    /// Speed test provider: librespeed, ookla or fast
+    #[arg(long, short = 'p', value_name = "NAME")]
+    pub provider: Option<ProviderKind>,
+
     /// Run headless: progress on stderr, summary on stdout
     #[arg(long)]
     pub no_tui: bool,

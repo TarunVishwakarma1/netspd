@@ -121,42 +121,15 @@ async fn run_once(
     loop {
         tokio::select! {
             maybe = events_rx.recv() => match maybe {
-                Some(EngineEvent::PhaseStarted { phase }) => {
-                    log(format!("{}…", phase.label().to_lowercase()));
-                }
-                Some(EngineEvent::PingFinished { stats }) => {
-                    log(format!(
-                        "  ping {}  jitter {}  loss {:.0}%",
-                        format_millis(stats.average_ms),
-                        format_millis(stats.jitter_ms),
-                        stats.packet_loss_pct
-                    ));
-                }
-                Some(EngineEvent::TransferFinished { phase, stats }) => {
-                    let arrow = match phase {
-                        TestPhase::Download => "↓",
-                        TestPhase::Upload => "↑",
-                        TestPhase::Ping => " ",
-                    };
-                    log(format!(
-                        "  {arrow} {}  peak {}  ({})",
-                        format_bps(stats.average_bps),
-                        format_bps(stats.peak_bps),
-                        format_bytes(stats.bytes)
-                    ));
-                }
-                Some(EngineEvent::Finished { report: done }) => report = Some(done),
-                Some(EngineEvent::Failed { message }) => failure = Some(message),
-                Some(EngineEvent::PingSample { .. } | EngineEvent::Progress { .. }) => {}
+                Some(event) => note_event(event, log, &mut report, &mut failure),
                 None => break,
             },
             result = &mut run => {
                 result?;
-                // Drain any events still in flight, then stop.
+                // Drain events still in flight (the final transfer and
+                // completion events often land after the run future).
                 while let Ok(event) = events_rx.try_recv() {
-                    if let EngineEvent::Finished { report: done } = event {
-                        report = Some(done);
-                    }
+                    note_event(event, log, &mut report, &mut failure);
                 }
                 break;
             }
@@ -167,4 +140,42 @@ async fn run_once(
         return Err(anyhow!(message));
     }
     report.ok_or_else(|| anyhow!("test produced no report"))
+}
+
+/// Logs one engine event and captures the terminal outcomes.
+fn note_event(
+    event: EngineEvent,
+    log: &impl Fn(String),
+    report: &mut Option<TestReport>,
+    failure: &mut Option<String>,
+) {
+    match event {
+        EngineEvent::PhaseStarted { phase } => {
+            log(format!("{}…", phase.label().to_lowercase()));
+        }
+        EngineEvent::PingFinished { stats } => {
+            log(format!(
+                "  ping {}  jitter {}  loss {:.0}%",
+                format_millis(stats.average_ms),
+                format_millis(stats.jitter_ms),
+                stats.packet_loss_pct
+            ));
+        }
+        EngineEvent::TransferFinished { phase, stats } => {
+            let arrow = match phase {
+                TestPhase::Download => "↓",
+                TestPhase::Upload => "↑",
+                TestPhase::Ping => " ",
+            };
+            log(format!(
+                "  {arrow} {}  peak {}  ({})",
+                format_bps(stats.average_bps),
+                format_bps(stats.peak_bps),
+                format_bytes(stats.bytes)
+            ));
+        }
+        EngineEvent::Finished { report: done } => *report = Some(done),
+        EngineEvent::Failed { message } => *failure = Some(message),
+        EngineEvent::PingSample { .. } | EngineEvent::Progress { .. } => {}
+    }
 }

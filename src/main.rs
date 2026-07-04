@@ -19,6 +19,9 @@ async fn main() -> anyhow::Result<()> {
 
     let mut settings = config::load().context("failed to load configuration")?;
     settings.apply_overrides(cli.duration, cli.connections);
+    if let Some(provider) = cli.provider {
+        settings.provider = provider;
+    }
 
     let provider = providers::create(settings.provider, settings.custom_servers())
         .context("failed to initialize provider")?;
