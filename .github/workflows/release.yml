@@ -31,6 +31,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify tag matches Cargo.toml version
+        shell: bash
+        run: |
+          set -euo pipefail
+          crate_version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$crate_version" != "$tag_version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $crate_version." >&2
+            echo "Bump Cargo.toml (and commit) before tagging." >&2
+            exit 1
+          fi
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
