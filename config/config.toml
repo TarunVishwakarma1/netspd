@@ -12,11 +12,16 @@ theme = "default"
 # UI refresh rate in frames per second (1..=60).
 refresh_rate = 30
 
-# Speed test provider. Currently supported: "librespeed".
+# Speed test provider: "librespeed", "ookla", "fast", or "custom"
+# (custom requires [[servers]] entries below).
 provider = "librespeed"
 
 # Multiplier applied to UI animations. 1.0 is normal speed.
 animation_speed = 1.0
+
+# Re-run the test automatically on this interval (min 30s), e.g. "15m".
+# Unset disables auto-repeat.
+# repeat_interval = "15m"
 
 [engine]
 # Number of HTTP latency samples collected during the ping phase.

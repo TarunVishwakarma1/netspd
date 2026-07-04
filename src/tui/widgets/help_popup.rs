@@ -10,16 +10,18 @@ use crate::tui::layout::centered;
 use crate::tui::theme::Theme;
 
 /// The full keymap displayed in the popup.
-const BINDINGS: [(&str, &str); 10] = [
+const BINDINGS: [(&str, &str); 12] = [
     ("q / Esc", "quit"),
     ("r", "restart test"),
     ("y", "copy result"),
     ("g", "result trends"),
     ("s", "select server"),
     ("t", "select theme"),
-    ("c", "view configuration"),
+    ("c", "edit configuration"),
     ("?", "this help"),
     ("↑↓ / jk", "navigate lists"),
+    ("←→ / hl", "adjust values, filter trends"),
+    ("w", "save configuration"),
     ("Enter", "confirm selection"),
 ];
 
@@ -47,10 +49,14 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme) {
     let lines: Vec<Line> = BINDINGS
         .iter()
         .map(|(key, description)| {
-            let key: &str = if *key == "↑↓ / jk" && !crate::tui::glyphs::current().fancy {
-                "jk"
-            } else {
+            let key: &str = if crate::tui::glyphs::current().fancy {
                 key
+            } else {
+                match *key {
+                    "↑↓ / jk" => "jk",
+                    "←→ / hl" => "hl",
+                    other => other,
+                }
             };
             Line::from(vec![
                 Span::styled(format!("{key:>9}  "), Style::default().fg(colors.accent)),

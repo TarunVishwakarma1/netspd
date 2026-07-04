@@ -53,4 +53,7 @@ pub enum Command {
     Share,
     /// Persist settings to the config file.
     SaveConfig,
+    /// Rebuild the engine for the newly selected provider and rediscover
+    /// servers.
+    ReloadProvider,
 }

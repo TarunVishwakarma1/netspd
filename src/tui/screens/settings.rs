@@ -22,6 +22,10 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
     let settings = &state.settings;
     let engine = &settings.engine;
 
+    let repeat_value = state
+        .repeat_every
+        .map(crate::utils::format::format_eta)
+        .unwrap_or_else(|| "off".to_owned());
     let rows: [(&str, String); AppState::SETTINGS_ROWS] = [
         (
             "theme",
@@ -31,6 +35,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
                 .cloned()
                 .unwrap_or_default(),
         ),
+        ("provider", settings.provider.label().to_owned()),
         ("refresh rate", format!("{} fps", settings.refresh_rate)),
         (
             "animation speed",
@@ -41,6 +46,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
         ("connections", engine.connections.to_string()),
         ("timeout", format!("{} s", engine.timeout_secs)),
         ("upload chunk", format!("{} KB", engine.upload_chunk_kb)),
+        ("auto-repeat", repeat_value),
     ];
 
     let popup = centered(area, 52, rows.len() as u16 + 8);
@@ -83,10 +89,12 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
         ]));
     }
     lines.push(Line::default());
-    lines.push(Line::from(Span::styled(
-        format!("  provider        {} (via --provider)", state.provider_name),
-        Style::default().fg(colors.muted),
-    )));
+    if state.settings.servers.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "  custom provider needs [[servers]] in config.toml",
+            Style::default().fg(colors.muted),
+        )));
+    }
     lines.push(Line::default());
     if let Some(notice) = state.notice() {
         lines.push(Line::from(Span::styled(
@@ -95,7 +103,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
         )));
     } else {
         lines.push(Line::from(Span::styled(
-            "  w saves; engine values apply on the next test",
+            "  w saves; theme/provider/repeat apply live, the rest next test",
             Style::default().fg(colors.muted),
         )));
     }

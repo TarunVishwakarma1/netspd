@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::engine::models::Server;
-use crate::engine::{Engine, EngineEvent};
+use crate::engine::{Engine, EngineConfig, EngineEvent};
 use crate::tui::renderer::Renderer;
 use crate::tui::terminal::Tui;
 
@@ -38,10 +38,13 @@ const TRENDS_LIMIT: usize = 120;
 /// the event loop until the user quits.
 pub struct App {
     engine: Arc<Engine>,
+    engine_config: EngineConfig,
     state: AppState,
     renderer: Renderer,
     tick_rate: Duration,
     engine_rx: Option<mpsc::Receiver<EngineEvent>>,
+    servers_rx: Option<mpsc::Receiver<Result<Vec<Server>, String>>>,
+    info_rx: Option<mpsc::Receiver<String>>,
     cancel: CancellationToken,
     failover_attempts: usize,
     prom_textfile: Option<std::path::PathBuf>,
@@ -49,14 +52,26 @@ pub struct App {
 
 impl App {
     /// Assembles the application from its parts.
+    ///
+    /// `engine_config` is kept so the engine can be rebuilt when the
+    /// user switches providers at runtime.
     #[must_use]
-    pub fn new(engine: Engine, state: AppState, renderer: Renderer, tick_rate: Duration) -> Self {
+    pub fn new(
+        engine: Engine,
+        engine_config: EngineConfig,
+        state: AppState,
+        renderer: Renderer,
+        tick_rate: Duration,
+    ) -> Self {
         Self {
             engine: Arc::new(engine),
+            engine_config,
             state,
             renderer,
             tick_rate,
             engine_rx: None,
+            servers_rx: None,
+            info_rx: None,
             cancel: CancellationToken::new(),
             failover_attempts: 0,
             prom_textfile: None,
@@ -72,8 +87,7 @@ impl App {
 
     /// Runs the event loop until quit, drawing at most one frame per tick.
     pub async fn run(mut self, tui: &mut Tui) -> Result<()> {
-        let mut servers_rx = Some(self.spawn_discovery());
-        let mut info_rx: Option<mpsc::Receiver<String>> = None;
+        self.servers_rx = Some(self.spawn_discovery());
         let mut input = EventStream::new();
         let mut ticker = tokio::time::interval(self.tick_rate);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -102,17 +116,17 @@ impl App {
                         continue;
                     }
                 },
-                maybe = recv_or_pending(&mut servers_rx) => match maybe {
+                maybe = recv_or_pending(&mut self.servers_rx) => match maybe {
                     Some(result) => AppEvent::ServersLoaded(result),
                     None => {
-                        servers_rx = None;
+                        self.servers_rx = None;
                         continue;
                     }
                 },
-                maybe = recv_or_pending(&mut info_rx) => match maybe {
+                maybe = recv_or_pending(&mut self.info_rx) => match maybe {
                     Some(info) => AppEvent::ClientInfo(info),
                     None => {
-                        info_rx = None;
+                        self.info_rx = None;
                         continue;
                     }
                 },
@@ -155,8 +169,8 @@ impl App {
                 }
                 AppEvent::ServersLoaded(result) => {
                     self.state.apply_servers(result);
-                    if info_rx.is_none() {
-                        info_rx = self.spawn_info_fetch();
+                    if self.info_rx.is_none() {
+                        self.info_rx = self.spawn_info_fetch();
                     }
                 }
                 AppEvent::ClientInfo(info) => {
@@ -231,6 +245,7 @@ impl App {
                 self.state.trends = history::load_recent(TRENDS_LIMIT);
             }
             Command::Share => self.share_result(),
+            Command::ReloadProvider => self.reload_provider(),
             Command::SaveConfig => match crate::config::save(&self.state.settings) {
                 Ok(path) => self
                     .state
@@ -240,6 +255,47 @@ impl App {
             Command::None => {}
         }
         false
+    }
+
+    /// Rebuilds the engine for the provider selected on the settings
+    /// screen, cancels any running test and starts fresh discovery.
+    fn reload_provider(&mut self) {
+        let kind = self.state.settings.provider;
+        let provider =
+            match crate::engine::providers::create(kind, self.state.settings.custom_servers()) {
+                Ok(provider) => provider,
+                Err(err) => {
+                    self.state.set_notice(err.to_string());
+                    return;
+                }
+            };
+        let engine = match Engine::new(provider, self.engine_config) {
+            Ok(engine) => engine,
+            Err(err) => {
+                self.state.set_notice(err.to_string());
+                return;
+            }
+        };
+
+        // Stop anything in flight against the old provider.
+        self.cancel.cancel();
+        self.cancel = CancellationToken::new();
+        self.engine_rx = None;
+        self.failover_attempts = 0;
+
+        self.engine = Arc::new(engine);
+        self.state.provider_name = self.engine.provider_name();
+        self.state.reset_test();
+        self.state.testing = false;
+        self.state.servers.clear();
+        self.state.server_index = 0;
+        self.state.server_cursor = 0;
+        self.state.client_info = None;
+        self.state.servers_loading = true;
+        self.info_rx = None;
+        self.servers_rx = Some(self.spawn_discovery());
+        self.state
+            .set_notice(format!("{} — discovering servers…", kind.label()));
     }
 
     /// Copies the last result to the clipboard and shows a confirmation.

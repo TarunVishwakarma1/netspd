@@ -286,11 +286,33 @@ impl AppState {
     }
 
     /// Number of editable rows on the settings screen.
-    pub const SETTINGS_ROWS: usize = 8;
+    pub const SETTINGS_ROWS: usize = 10;
+
+    /// Repeat-interval presets cycled on the settings screen (`None`
+    /// disables auto-repeat).
+    pub const REPEAT_PRESETS: [Option<u64>; 6] =
+        [None, Some(30), Some(60), Some(300), Some(900), Some(3600)];
+
+    /// The provider kinds selectable on the settings screen. `Custom`
+    /// only appears when `[[servers]]` entries exist to back it.
+    #[must_use]
+    pub fn provider_choices(&self) -> Vec<crate::engine::providers::ProviderKind> {
+        use crate::engine::providers::ProviderKind;
+        let mut choices = vec![
+            ProviderKind::Librespeed,
+            ProviderKind::Ookla,
+            ProviderKind::Fast,
+        ];
+        if !self.settings.servers.is_empty() {
+            choices.push(ProviderKind::Custom);
+        }
+        choices
+    }
 
     /// Adjusts the setting under the cursor by one step, within the same
-    /// clamps the config loader enforces.
-    pub fn adjust_setting(&mut self, delta: i64) {
+    /// clamps the config loader enforces. Returns `true` when the
+    /// provider changed and the engine needs a rebuild.
+    pub fn adjust_setting(&mut self, delta: i64) -> bool {
         let up = delta > 0;
         let step_u64 = |value: u64, min: u64, max: u64, step: u64| -> u64 {
             if up {
@@ -299,6 +321,7 @@ impl AppState {
                 value.saturating_sub(step).max(min)
             }
         };
+        let mut provider_changed = false;
         match self.settings_cursor {
             0 => {
                 // Theme: applies live.
@@ -311,10 +334,23 @@ impl AppState {
                 }
             }
             1 => {
+                // Provider: applies immediately via an engine rebuild.
+                let choices = self.provider_choices();
+                let current = choices
+                    .iter()
+                    .position(|kind| *kind == self.settings.provider)
+                    .unwrap_or(0) as i64;
+                let next = (current + delta).rem_euclid(choices.len() as i64) as usize;
+                if choices[next] != self.settings.provider {
+                    self.settings.provider = choices[next];
+                    provider_changed = true;
+                }
+            }
+            2 => {
                 self.settings.refresh_rate =
                     step_u64(u64::from(self.settings.refresh_rate), 5, 60, 5) as u16;
             }
-            2 => {
+            3 => {
                 let value = (self.settings.animation_speed * 10.0).round() / 10.0;
                 self.settings.animation_speed = if up {
                     (value + 0.1).min(5.0)
@@ -322,28 +358,41 @@ impl AppState {
                     (value - 0.1).max(0.1)
                 };
             }
-            3 => {
+            4 => {
                 self.settings.engine.ping_samples =
                     step_u64(u64::from(self.settings.engine.ping_samples), 3, 100, 1) as u32;
             }
-            4 => {
+            5 => {
                 self.settings.engine.duration_secs =
                     step_u64(self.settings.engine.duration_secs, 3, 60, 1);
             }
-            5 => {
+            6 => {
                 self.settings.engine.connections =
                     step_u64(self.settings.engine.connections as u64, 1, 16, 1) as usize;
             }
-            6 => {
+            7 => {
                 self.settings.engine.timeout_secs =
                     step_u64(self.settings.engine.timeout_secs, 2, 120, 1);
             }
-            _ => {
+            8 => {
                 self.settings.engine.upload_chunk_kb =
                     step_u64(self.settings.engine.upload_chunk_kb as u64, 64, 8192, 64) as usize;
             }
+            _ => {
+                // Auto-repeat interval: applies live.
+                let presets = Self::REPEAT_PRESETS;
+                let current_secs = self.repeat_every.map(|d| d.as_secs());
+                let current = presets
+                    .iter()
+                    .position(|preset| *preset == current_secs)
+                    .unwrap_or(0) as i64;
+                let next = (current + delta).rem_euclid(presets.len() as i64) as usize;
+                self.repeat_every = presets[next].map(Duration::from_secs);
+                self.settings.repeat_interval = presets[next].map(|secs| format!("{secs}s"));
+            }
         }
         self.request_redraw();
+        provider_changed
     }
 
     /// Shows a transient status message for a few seconds.

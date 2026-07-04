@@ -109,7 +109,7 @@ With `--interval` (or `repeat_interval` in config) the TUI shows a countdown on 
 | `g` | Result trends from your history |
 | `s` | Server selection |
 | `t` | Theme selector |
-| `c` | Edit configuration (`←→` adjust, `w` save) |
+| `c` | Edit configuration — theme, provider, engine values (`←→` adjust, `w` save) |
 | `?` | Help |
 | `↑↓` / `jk`, `Enter` | Navigate and confirm in lists (mouse wheel + click too) |
 | `←→` / `hl` | Adjust values · filter trends by server |
@@ -134,7 +134,10 @@ netspd --json | jq .download_mbps
   "download_bytes": 117193129,
   "upload_mbps": 66.3,
   "upload_peak_mbps": 87.8,
-  "upload_bytes": 82837504
+  "upload_bytes": 82837504,
+  "loaded_down_ms": 144.5,
+  "loaded_up_ms": 163.2,
+  "bufferbloat": "A"
 }
 ```
 
@@ -152,7 +155,7 @@ Every key is optional; see [`config/config.toml`](config/config.toml) for the an
 ```toml
 theme = "catppuccin"       # default | nord | dracula | catppuccin | gruvbox
 refresh_rate = 30          # UI frames per second (1..=60)
-provider = "librespeed"    # librespeed | ookla | fast
+provider = "librespeed"    # librespeed | ookla | fast | custom
 animation_speed = 1.0
 
 [engine]

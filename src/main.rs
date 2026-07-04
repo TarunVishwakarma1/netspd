@@ -119,7 +119,7 @@ async fn main() -> anyhow::Result<()> {
     );
     state.preferred_server = cli.server;
     state.repeat_every = repeat;
-    let app = App::new(engine, state, renderer, settings.tick_rate())
+    let app = App::new(engine, engine_config, state, renderer, settings.tick_rate())
         .with_prom_textfile(cli.prom_textfile);
 
     install_panic_hook();

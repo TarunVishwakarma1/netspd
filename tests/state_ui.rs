@@ -57,8 +57,8 @@ fn trends_filter_cycles_and_filters() {
 fn settings_adjust_respects_clamps() {
     let mut state = state_with_trends();
 
-    // Row 5: connections, clamped to 1..=16.
-    state.settings_cursor = 5;
+    // Row 6: connections, clamped to 1..=16.
+    state.settings_cursor = 6;
     for _ in 0..40 {
         state.adjust_setting(1);
     }
@@ -77,4 +77,41 @@ fn settings_adjust_respects_clamps() {
         state.settings.theme,
         state.theme_names[state.theme_index].to_lowercase()
     );
+}
+
+#[test]
+fn settings_provider_row_cycles_and_signals_reload() {
+    use netspd::engine::providers::ProviderKind;
+
+    let mut state = state_with_trends();
+    state.settings_cursor = 1;
+
+    // No [[servers]] configured: custom is not offered.
+    assert_eq!(state.provider_choices().len(), 3);
+
+    assert_eq!(state.settings.provider, ProviderKind::Librespeed);
+    assert!(state.adjust_setting(1)); // → Ookla, needs engine rebuild
+    assert_eq!(state.settings.provider, ProviderKind::Ookla);
+    assert!(state.adjust_setting(1)); // → Fast
+    assert_eq!(state.settings.provider, ProviderKind::Fast);
+    assert!(state.adjust_setting(1)); // wraps → Librespeed
+    assert_eq!(state.settings.provider, ProviderKind::Librespeed);
+
+    // Non-provider rows never signal a reload.
+    state.settings_cursor = 0;
+    assert!(!state.adjust_setting(1));
+}
+
+#[test]
+fn settings_repeat_row_cycles_presets_live() {
+    let mut state = state_with_trends();
+    state.settings_cursor = netspd::app::state::AppState::SETTINGS_ROWS - 1;
+
+    assert!(state.repeat_every.is_none());
+    assert!(!state.adjust_setting(1)); // off → 30s
+    assert_eq!(state.repeat_every, Some(std::time::Duration::from_secs(30)));
+    assert_eq!(state.settings.repeat_interval.as_deref(), Some("30s"));
+    state.adjust_setting(-1); // back to off
+    assert!(state.repeat_every.is_none());
+    assert!(state.settings.repeat_interval.is_none());
 }

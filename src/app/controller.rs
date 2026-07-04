@@ -112,25 +112,28 @@ pub fn handle(state: &mut AppState, action: Action) -> Command {
             move_cursor(state, 1);
             Command::None
         }
-        Action::MoveLeft => {
-            adjust(state, -1);
-            Command::None
-        }
-        Action::MoveRight => {
-            adjust(state, 1);
-            Command::None
-        }
+        Action::MoveLeft => adjust(state, -1),
+        Action::MoveRight => adjust(state, 1),
         Action::SaveConfig => Command::SaveConfig,
         Action::Confirm => confirm(state),
     }
 }
 
 /// Applies a left/right adjustment on screens that support it.
-fn adjust(state: &mut AppState, delta: i64) {
+fn adjust(state: &mut AppState, delta: i64) -> Command {
     match state.screen {
-        Screen::Trends => state.cycle_trends_filter(delta),
-        Screen::Settings => state.adjust_setting(delta),
-        _ => {}
+        Screen::Trends => {
+            state.cycle_trends_filter(delta);
+            Command::None
+        }
+        Screen::Settings => {
+            if state.adjust_setting(delta) {
+                Command::ReloadProvider
+            } else {
+                Command::None
+            }
+        }
+        _ => Command::None,
     }
 }
 
