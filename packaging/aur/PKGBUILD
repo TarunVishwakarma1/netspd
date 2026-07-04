@@ -1,6 +1,6 @@
 # Maintainer: Tarun Vishwakarma <tarunvishwakarma81@gmail.com>
 pkgname=netspd
-pkgver=0.1.3
+pkgver=0.1.4
 pkgrel=1
 pkgdesc="Beautiful network speed test for the terminal, with a hypercar tachometer"
 arch=('x86_64' 'aarch64')
@@ -8,7 +8,7 @@ url="https://github.com/TarunVishwakarma1/netspd"
 license=('MIT')
 makedepends=('cargo')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('32b8a96a2bc0130fd784b63002f56964196ac25cb857aab6c01815da4708179c')
+sha256sums=('bc204cd40d495c7e476db9a79e0534492f241fbff7447f4c707ad315db151055')
 
 prepare() {
     cd "$pkgname-$pkgver"
