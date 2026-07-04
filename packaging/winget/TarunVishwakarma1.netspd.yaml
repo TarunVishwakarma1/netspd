@@ -1,7 +1,7 @@
 # Version manifest — submit with `wingetcreate` or a PR to
-# microsoft/winget-pkgs under manifests/t/TarunVishwakarma1/netspd/0.1.4/
+# microsoft/winget-pkgs under manifests/t/TarunVishwakarma1/netspd/0.1.5/
 PackageIdentifier: TarunVishwakarma1.netspd
-PackageVersion: 0.1.4
+PackageVersion: 0.1.5
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0

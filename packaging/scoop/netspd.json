@@ -1,11 +1,11 @@
 {
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "Beautiful network speed test for the terminal, with a hypercar tachometer",
     "homepage": "https://github.com/TarunVishwakarma1/netspd",
     "license": "MIT",
-    "url": "https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.4/netspd-v0.1.4-x86_64-pc-windows-msvc.zip",
-    "hash": "b20de898f69e0f8c8d571ef2b6467bded8f4cf424c172de4bbe9883fedf21747",
-    "extract_dir": "netspd-v0.1.4-x86_64-pc-windows-msvc",
+    "url": "https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.5/netspd-v0.1.5-x86_64-pc-windows-msvc.zip",
+    "hash": "46faaa377a61ee3d615802eac8306af1d6623819766b9040465b0e8e0d23dc66",
+    "extract_dir": "netspd-v0.1.5-x86_64-pc-windows-msvc",
     "bin": "netspd.exe",
     "checkver": {
         "github": "https://github.com/TarunVishwakarma1/netspd"
