@@ -15,6 +15,8 @@ pub enum Action {
     ShowServers,
     /// Open the theme selection screen.
     ShowThemes,
+    /// Open the result trends screen.
+    ShowTrends,
     /// Leave the current overlay screen.
     Back,
     /// Move the selection cursor up.
@@ -37,4 +39,6 @@ pub enum Command {
     Quit,
     /// Cancel any running test and start a new one.
     StartTest,
+    /// Load stored results for the trends screen.
+    LoadTrends,
 }

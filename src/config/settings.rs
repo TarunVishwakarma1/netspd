@@ -146,6 +146,16 @@ impl Settings {
         }
     }
 
+    /// Applies command line overrides on top of the file configuration.
+    pub fn apply_overrides(&mut self, duration_secs: Option<u64>, connections: Option<usize>) {
+        if let Some(duration) = duration_secs {
+            self.engine.duration_secs = duration;
+        }
+        if let Some(connections) = connections {
+            self.engine.connections = connections;
+        }
+    }
+
     /// Resolves the custom `[[servers]]` entries into engine servers.
     #[must_use]
     pub fn custom_servers(&self) -> Vec<Server> {

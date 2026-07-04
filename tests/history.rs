@@ -71,3 +71,30 @@ fn append_creates_directories_and_accumulates_lines() -> Result<(), Box<dyn std:
     std::fs::remove_dir_all(&dir)?;
     Ok(())
 }
+
+#[test]
+fn load_skips_bad_lines_and_honors_limit() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = std::env::temp_dir().join(format!("netspd-load-{}", std::process::id()));
+    let path = dir.join("history.jsonl");
+    let record = HistoryRecord::from_report(&sample_report());
+
+    netspd::app::history::append(&path, &record)?;
+    // Simulate a corrupt line in the middle of the file.
+    {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new().append(true).open(&path)?;
+        writeln!(file, "not json at all")?;
+    }
+    netspd::app::history::append(&path, &record)?;
+    netspd::app::history::append(&path, &record)?;
+
+    let all = netspd::app::history::load(&path, 100);
+    assert_eq!(all.len(), 3);
+    let limited = netspd::app::history::load(&path, 2);
+    assert_eq!(limited.len(), 2);
+    // A missing file is empty, not an error.
+    assert!(netspd::app::history::load(&dir.join("nope.jsonl"), 10).is_empty());
+
+    std::fs::remove_dir_all(&dir)?;
+    Ok(())
+}

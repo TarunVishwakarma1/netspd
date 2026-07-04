@@ -30,6 +30,8 @@ pub enum Screen {
     ServerSelect,
     /// Theme selection list.
     ThemeSelect,
+    /// Past results and trends.
+    Trends,
     /// A fatal test error.
     Error,
 }
@@ -40,7 +42,7 @@ impl Screen {
     pub fn is_overlay(self) -> bool {
         matches!(
             self,
-            Self::Help | Self::Settings | Self::ServerSelect | Self::ThemeSelect
+            Self::Help | Self::Settings | Self::ServerSelect | Self::ThemeSelect | Self::Trends
         )
     }
 
@@ -178,6 +180,10 @@ pub struct AppState {
     pub provider_name: &'static str,
     /// The client's public IP and ISP, once discovered.
     pub client_info: Option<String>,
+    /// Server query from `--server`; applied when discovery completes.
+    pub preferred_server: Option<String>,
+    /// Past results shown on the trends screen.
+    pub trends: Vec<crate::app::history::HistoryRecord>,
     /// Set when the visible content changed and a redraw is required.
     dirty: bool,
 }
@@ -214,6 +220,8 @@ impl AppState {
             settings,
             provider_name,
             client_info: None,
+            preferred_server: None,
+            trends: Vec::new(),
             dirty: true,
         }
     }
@@ -272,8 +280,14 @@ impl AppState {
         match result {
             Ok(servers) => {
                 self.servers = servers;
-                self.server_index = 0;
-                self.server_cursor = 0;
+                // Honor --server by preselecting the first match; fall
+                // back to the nearest server when nothing matches.
+                self.server_index = self
+                    .preferred_server
+                    .as_deref()
+                    .and_then(|query| self.servers.iter().position(|s| s.matches(query)))
+                    .unwrap_or(0);
+                self.server_cursor = self.server_index;
             }
             Err(message) => {
                 self.error = Some(message);

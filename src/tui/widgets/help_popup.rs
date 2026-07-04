@@ -10,9 +10,10 @@ use crate::tui::layout::centered;
 use crate::tui::theme::Theme;
 
 /// The full keymap displayed in the popup.
-const BINDINGS: [(&str, &str); 8] = [
+const BINDINGS: [(&str, &str); 9] = [
     ("q / Esc", "quit"),
     ("r", "restart test"),
+    ("g", "result trends"),
     ("s", "select server"),
     ("t", "select theme"),
     ("c", "view configuration"),

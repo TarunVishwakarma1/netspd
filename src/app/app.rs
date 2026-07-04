@@ -27,6 +27,13 @@ const MIN_SPLASH: Duration = Duration::from_millis(1200);
 /// frequent, so a modest buffer avoids backpressure on the engine.
 const ENGINE_CHANNEL_CAPACITY: usize = 64;
 
+/// How many alternative servers are tried automatically after a failure
+/// before showing the error screen.
+const MAX_FAILOVER: usize = 2;
+
+/// Number of past results loaded for the trends screen.
+const TRENDS_LIMIT: usize = 120;
+
 /// The application: owns the engine, the state and the renderer, and runs
 /// the event loop until the user quits.
 pub struct App {
@@ -36,6 +43,7 @@ pub struct App {
     tick_rate: Duration,
     engine_rx: Option<mpsc::Receiver<EngineEvent>>,
     cancel: CancellationToken,
+    failover_attempts: usize,
 }
 
 impl App {
@@ -49,6 +57,7 @@ impl App {
             tick_rate,
             engine_rx: None,
             cancel: CancellationToken::new(),
+            failover_attempts: 0,
         }
     }
 
@@ -106,13 +115,23 @@ impl App {
                     };
                     match controller::handle(&mut self.state, action) {
                         Command::Quit => break,
-                        Command::StartTest => self.start_test(),
+                        Command::StartTest => {
+                            self.failover_attempts = 0;
+                            self.start_test();
+                        }
+                        Command::LoadTrends => {
+                            self.state.trends = history::load_recent(TRENDS_LIMIT);
+                        }
                         Command::None => {}
                     }
                 }
                 AppEvent::Resize => self.state.request_redraw(),
                 AppEvent::Engine(engine_event) => {
+                    if matches!(engine_event, EngineEvent::Failed { .. }) && self.try_failover() {
+                        continue;
+                    }
                     if let EngineEvent::Finished { report } = &engine_event {
+                        self.failover_attempts = 0;
                         // Best-effort persistence; the UI never blocks on it.
                         history::record_report(report);
                     }
@@ -180,6 +199,26 @@ impl App {
         if ready {
             self.start_test();
         }
+    }
+
+    /// Moves to the next-nearest server after a failure and restarts,
+    /// up to [`MAX_FAILOVER`] times. Returns whether a retry started.
+    ///
+    /// Skipped when the user pinned a server with `--server`: an explicit
+    /// choice should fail loudly, not wander.
+    fn try_failover(&mut self) -> bool {
+        let next = self.state.server_index + 1;
+        let possible = self.state.preferred_server.is_none()
+            && self.failover_attempts < MAX_FAILOVER
+            && next < self.state.servers.len();
+        if !possible {
+            return false;
+        }
+        self.failover_attempts += 1;
+        self.state.server_index = next;
+        self.state.server_cursor = next;
+        self.start_test();
+        true
     }
 
     /// Cancels any running test and launches a new one against the

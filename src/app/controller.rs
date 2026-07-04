@@ -26,6 +26,7 @@ pub fn map_key(screen: Screen, key: KeyEvent) -> Option<Action> {
         KeyCode::Char('t') => Some(Action::ShowThemes),
         KeyCode::Char('c') => Some(Action::ShowSettings),
         KeyCode::Char('?') => Some(Action::ShowHelp),
+        KeyCode::Char('g') => Some(Action::ShowTrends),
         KeyCode::Up | KeyCode::Char('k') => Some(Action::MoveUp),
         KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
         KeyCode::Enter => Some(Action::Confirm),
@@ -64,6 +65,10 @@ pub fn handle(state: &mut AppState, action: Action) -> Command {
             state.theme_cursor = state.theme_index;
             open_overlay(state, Screen::ThemeSelect);
             Command::None
+        }
+        Action::ShowTrends => {
+            open_overlay(state, Screen::Trends);
+            Command::LoadTrends
         }
         Action::Back => {
             if state.screen.is_overlay() {

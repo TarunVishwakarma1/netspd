@@ -103,6 +103,29 @@ pub fn record_report(report: &TestReport) {
     }
 }
 
+/// Reads up to the last `limit` records from a history file.
+///
+/// Unreadable files yield an empty list; individual malformed lines are
+/// skipped, so one corrupt entry never hides the rest.
+#[must_use]
+pub fn load(path: &Path, limit: usize) -> Vec<HistoryRecord> {
+    let Ok(contents) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    let records: Vec<HistoryRecord> = contents
+        .lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect();
+    let skip = records.len().saturating_sub(limit);
+    records.into_iter().skip(skip).collect()
+}
+
+/// Reads up to the last `limit` records from the default history file.
+#[must_use]
+pub fn load_recent(limit: usize) -> Vec<HistoryRecord> {
+    default_path().map_or_else(Vec::new, |path| load(&path, limit))
+}
+
 fn round1(value: f64) -> f64 {
     (value * 10.0).round() / 10.0
 }

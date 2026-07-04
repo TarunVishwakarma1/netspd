@@ -7,6 +7,7 @@
 pub mod action;
 #[allow(clippy::module_inception)]
 pub mod app;
+pub mod cli;
 pub mod controller;
 pub mod event;
 pub mod headless;

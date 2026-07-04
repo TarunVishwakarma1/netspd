@@ -6,6 +6,17 @@ All notable changes to netspd are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Trends screen (`g`): download/upload sparklines and last/avg/best
+  figures across all stored runs.
+- CLI flags via clap: `--server`/`-s` (pick by name or host substring),
+  `--list-servers`, `--duration`/`-d`, `--connections`/`-c`, plus
+  generated `--help`.
+- Automatic failover: when a test fails, up to two next-nearest servers
+  are tried before the error screen (TUI) or the run aborts (headless
+  tries up to three unless `--server` pins one).
+
 ## [0.1.0] - 2026-07-03
 
 ### Added

@@ -48,6 +48,15 @@ impl Server {
             },
         }
     }
+
+    /// Whether this server's name or host contains `query`,
+    /// case-insensitively. Used for `--server` selection.
+    #[must_use]
+    pub fn matches(&self, query: &str) -> bool {
+        let query = query.to_lowercase();
+        self.name.to_lowercase().contains(&query)
+            || self.description.to_lowercase().contains(&query)
+    }
 }
 
 /// Ensures a scheme and a trailing slash on a base URL.

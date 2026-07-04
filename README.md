@@ -5,6 +5,7 @@
 **A beautiful, modern network speed test for your terminal — with a hypercar tachometer.**
 
 [![CI](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml/badge.svg)](https://github.com/TarunVishwakarma1/netspd/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/netspd.svg)](https://crates.io/crates/netspd)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.88%2B-orange.svg)](Cargo.toml)
 
@@ -46,12 +47,15 @@ Requires Rust 1.88 or newer.
 ## Usage
 
 ```sh
-netspd            # full TUI
-netspd --no-tui   # headless: progress on stderr, summary on stdout
-netspd --json     # headless: report as one JSON object on stdout
+netspd                     # full TUI
+netspd --no-tui            # headless: progress on stderr, summary on stdout
+netspd --json              # headless: report as one JSON object on stdout
+netspd --list-servers      # print reachable servers, nearest first
+netspd -s tokyo            # pick a server by name/host substring
+netspd -d 5 -c 8           # 5-second phases over 8 connections
 ```
 
-The test starts automatically: ping → download → upload, then a results summary.
+The test starts automatically: ping → download → upload, then a results summary. If a server fails mid-test, netspd automatically retries with the next-nearest one (unless you pinned a server with `--server`).
 
 ### Keyboard
 
@@ -59,6 +63,7 @@ The test starts automatically: ping → download → upload, then a results summ
 | --- | --- |
 | `q` / `Esc` | Quit (Esc closes overlays first) |
 | `r` | Restart the test |
+| `g` | Result trends from your history |
 | `s` | Server selection |
 | `t` | Theme selector |
 | `c` | View configuration |
@@ -158,8 +163,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
 
 - [x] JSON result export and `--no-tui` CLI mode
 - [x] Result history (JSON lines)
-- [ ] Trend sparklines over the stored history
-- [ ] `--server` selection and richer CLI flags
+- [x] Trend sparklines over the stored history (`g`)
+- [x] `--server`, `--list-servers`, `--duration`, `--connections` flags
+- [x] Automatic failover to the next server on failure
 - [ ] Packet loss via ICMP (the reporting model is already in place)
 - [ ] Ookla and Fast.com providers
 - [ ] Scheduled repeat testing

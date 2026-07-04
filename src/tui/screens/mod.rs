@@ -11,3 +11,4 @@ pub mod settings;
 pub mod splash;
 pub mod testing;
 pub mod theme_select;
+pub mod trends;

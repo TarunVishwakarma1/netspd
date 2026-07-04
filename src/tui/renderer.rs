@@ -227,6 +227,7 @@ impl Renderer {
             Screen::ThemeSelect => {
                 screens::theme_select::render(frame, area, theme, state, &self.themes);
             }
+            Screen::Trends => screens::trends::render(frame, area, theme, state),
             base => self.render_base(frame, area, theme, state, motion, base),
         }
     }
@@ -285,12 +286,12 @@ fn hints_for(screen: Screen) -> &'static [Hint] {
         ],
         Screen::Results => &[
             ("r", "run again"),
+            ("g", "trends"),
             ("s", "servers"),
             ("t", "theme"),
-            ("c", "config"),
             ("q", "quit"),
         ],
-        Screen::Help | Screen::Settings => &[("Esc", "back"), ("q", "quit")],
+        Screen::Help | Screen::Settings | Screen::Trends => &[("Esc", "back"), ("q", "quit")],
         Screen::ServerSelect | Screen::ThemeSelect => {
             &[("↑↓", "navigate"), ("Enter", "select"), ("Esc", "back")]
         }
