@@ -67,6 +67,26 @@ async fn main() -> anyhow::Result<()> {
         None => settings.repeat_interval(),
     };
 
+    if cli.list_providers {
+        use netspd::engine::providers::ProviderKind;
+        println!("{:<12}  DESCRIPTION", "PROVIDER");
+        println!("{}", "-".repeat(72));
+        for kind in ProviderKind::ALL {
+            let marker = if kind == settings.provider {
+                " *"
+            } else {
+                "  "
+            };
+            println!("{:<12}{} {}", kind.label(), marker, kind.description());
+        }
+        println!();
+        println!(
+            "Active: {} (override with -p or set provider = \"…\" in config.toml)",
+            settings.provider.label()
+        );
+        return Ok(());
+    }
+
     let provider = providers::create(settings.provider, custom_servers)
         .context("failed to initialize provider")?;
     let mut engine_config = settings.engine_config();

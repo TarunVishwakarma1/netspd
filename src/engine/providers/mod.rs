@@ -63,6 +63,20 @@ impl ProviderKind {
             Self::Custom => "Custom",
         }
     }
+
+    /// One-line description shown by `--list-providers`.
+    #[must_use]
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Librespeed => "open-source community server network",
+            Self::Ookla => "Ookla speedtest.net",
+            Self::Fast => "Netflix Fast.com",
+            Self::Custom => "your own [[servers]] in config.toml (LAN, pods, self-hosted backends)",
+        }
+    }
+
+    /// All selectable provider kinds, in display order.
+    pub const ALL: [Self; 4] = [Self::Librespeed, Self::Ookla, Self::Fast, Self::Custom];
 }
 
 impl std::str::FromStr for ProviderKind {

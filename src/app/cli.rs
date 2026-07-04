@@ -43,6 +43,10 @@ pub struct Cli {
     #[arg(long)]
     pub list_servers: bool,
 
+    /// List available providers with descriptions and exit
+    #[arg(long)]
+    pub list_providers: bool,
+
     /// Override the duration of each transfer phase, in seconds (3-60)
     #[arg(long, short = 'd', value_name = "SECS")]
     pub duration: Option<u64>,
@@ -131,6 +135,7 @@ impl Cli {
             || self.json
             || self.csv
             || self.list_servers
+            || self.list_providers
             || self.compare.is_some()
             || self.history
     }
