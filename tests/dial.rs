@@ -80,6 +80,7 @@ fn dial_renders_braille_art_with_scale_labels() -> Result<(), Box<dyn std::error
                 ping_ms: Some(23.0),
                 override_ratio: None,
                 dimmed: false,
+                speed_unit: netspd::utils::format::SpeedUnit::Bits,
             },
         );
     })?;

@@ -1,4 +1,4 @@
-//! Shared card layout for download and upload metrics.
+//! Transfer metrics card: shared layout used by download and upload.
 
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
@@ -93,6 +93,50 @@ pub fn render(
         ),
     ];
     frame.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Renders the download card.
+pub fn render_download(
+    frame: &mut Frame,
+    area: Rect,
+    theme: &Theme,
+    view: &TransferView,
+    active: bool,
+) {
+    render(
+        frame,
+        area,
+        theme,
+        CardStyle {
+            title: "Download",
+            icon: crate::tui::glyphs::current().down,
+            color: theme.colors.download,
+        },
+        view,
+        active,
+    );
+}
+
+/// Renders the upload card.
+pub fn render_upload(
+    frame: &mut Frame,
+    area: Rect,
+    theme: &Theme,
+    view: &TransferView,
+    active: bool,
+) {
+    render(
+        frame,
+        area,
+        theme,
+        CardStyle {
+            title: "Upload",
+            icon: crate::tui::glyphs::current().up,
+            color: theme.colors.upload,
+        },
+        view,
+        active,
+    );
 }
 
 /// Whether the phase has produced any data yet.

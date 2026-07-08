@@ -9,9 +9,20 @@ use ratatui::Frame;
 use crate::app::state::AppState;
 use crate::tui::layout::centered;
 use crate::tui::theme::Theme;
+use crate::tui::theme_registry::ThemeRegistry;
 
-/// Renders the theme list; each row previews the theme's key colors.
-pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, themes: &[Theme]) {
+/// Renders the theme list; each row previews the theme's key colours.
+///
+/// All text uses only ASCII-width characters to avoid terminal cursor drift
+/// from ambiguous-width Unicode, which progressively corrupts ratatui's diff
+/// model across frames.
+pub fn render(
+    frame: &mut Frame,
+    area: Rect,
+    theme: &Theme,
+    state: &AppState,
+    registry: &ThemeRegistry,
+) {
     let colors = &theme.colors;
     let popup = centered(area, 44, state.theme_names.len() as u16 + 4);
     frame.render_widget(Clear, popup);
@@ -37,6 +48,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
         .map(|(index, name)| {
             let is_cursor = index == state.theme_cursor;
             let is_active = index == state.theme_index;
+
             let marker = if is_cursor {
                 crate::tui::glyphs::current().cursor
             } else {
@@ -47,6 +59,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
             } else {
                 ""
             };
+
             let name_style = if is_cursor {
                 Style::default()
                     .fg(colors.accent)
@@ -54,11 +67,14 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
             } else {
                 Style::default().fg(colors.text)
             };
+
             let mut spans = vec![
                 Span::styled(marker, Style::default().fg(colors.accent)),
                 Span::styled(format!("{name:<12}"), name_style),
             ];
-            if let Some(preview) = themes.get(index) {
+
+            // Colour swatches from the theme's palette.
+            if let Some(preview) = registry.get(index) {
                 let palette = [
                     preview.colors.accent,
                     preview.colors.download,
@@ -70,6 +86,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, th
                     spans.push(Span::styled("██", Style::default().fg(swatch)));
                 }
             }
+
             spans.push(Span::styled(
                 active_mark,
                 Style::default().fg(colors.success),

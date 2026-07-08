@@ -9,9 +9,9 @@ use crate::tui::layout::{breakpoint, padded, Breakpoint};
 use crate::tui::renderer::Motion;
 use crate::tui::theme::Theme;
 use crate::tui::widgets::dial_gauge::{self, DialData};
-use crate::tui::widgets::{
-    download_card, ping_card, progress_bar, speed_gauge, status_bar, upload_card,
-};
+use crate::tui::widgets::speed_gauge::{self, SpeedGaugeData};
+use crate::tui::widgets::{ping_card, progress_bar, status_bar, transfer_card};
+use crate::utils::format::SpeedUnit;
 
 /// Minimum gauge-slot height for the analog dial; below this the compact
 /// block-digit gauge renders instead.
@@ -40,14 +40,20 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, mo
     .areas(body);
 
     let phase = state.phase;
-    // ETA appears only once bytes move; during the ignition lead-in the
-    // phase has been announced but nothing is measured yet.
+    // The progress bar tracks elapsed time (the engine's ratio), so it fills
+    // smoothly from the first monitor sample regardless of when bytes land.
+    // ETA appears only once bytes move: during the ignition lead-in the phase
+    // has been announced but nothing is measured yet, and an upload's first
+    // whole request may take seconds to complete on a slow uplink — the bar
+    // must not stall waiting for it, then snap forward when it arrives.
     let (eta, ratio) = match phase {
-        Some(TestPhase::Download) if state.download.bytes > 0 => {
-            (Some(state.download.eta), motion.download_ratio)
+        Some(TestPhase::Download) => {
+            let eta = (state.download.bytes > 0).then_some(state.download.eta);
+            (eta, motion.download_ratio)
         }
-        Some(TestPhase::Upload) if state.upload.bytes > 0 => {
-            (Some(state.upload.eta), motion.upload_ratio)
+        Some(TestPhase::Upload) => {
+            let eta = (state.upload.bytes > 0).then_some(state.upload.eta);
+            (eta, motion.upload_ratio)
         }
         _ => (None, 0.0),
     };
@@ -88,14 +94,14 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState, mo
         &state.ping,
         phase == Some(TestPhase::Ping),
     );
-    download_card::render(
+    transfer_card::render_download(
         frame,
         download_area,
         theme,
         &state.download,
         phase == Some(TestPhase::Download),
     );
-    upload_card::render(
+    transfer_card::render_upload(
         frame,
         upload_area,
         theme,
@@ -143,6 +149,7 @@ fn render_gauge(
                 ping_ms,
                 override_ratio: sweep_for(motion, phase, TestPhase::Download),
                 dimmed: !download_active,
+                speed_unit: state.speed_unit,
             },
         );
         dial_gauge::render(
@@ -158,6 +165,7 @@ fn render_gauge(
                 ping_ms,
                 override_ratio: sweep_for(motion, phase, TestPhase::Upload),
                 dimmed: download_active,
+                speed_unit: state.speed_unit,
             },
         );
         return;
@@ -198,6 +206,7 @@ fn render_gauge(
                 ping_ms,
                 override_ratio: sweep_for(motion, phase, active_phase),
                 dimmed: false,
+                speed_unit: state.speed_unit,
             },
         );
         return;
@@ -209,28 +218,37 @@ fn render_gauge(
             frame,
             area,
             theme,
-            "Upload",
-            motion.upload_bps,
-            colors.upload,
-            &state.upload.history,
+            &SpeedGaugeData {
+                label: "Upload",
+                bps: motion.upload_bps,
+                color: colors.upload,
+                history: &state.upload.history,
+                speed_unit: state.speed_unit,
+            },
         ),
         Some(TestPhase::Ping) => speed_gauge::render(
             frame,
             area,
             theme,
-            "Ping",
-            0.0,
-            colors.latency,
-            &state.ping.history,
+            &SpeedGaugeData {
+                label: "Ping",
+                bps: 0.0,
+                color: colors.latency,
+                history: &state.ping.history,
+                speed_unit: SpeedUnit::Bits,
+            },
         ),
         _ => speed_gauge::render(
             frame,
             area,
             theme,
-            "Download",
-            motion.download_bps,
-            colors.download,
-            &state.download.history,
+            &SpeedGaugeData {
+                label: "Download",
+                bps: motion.download_bps,
+                color: colors.download,
+                history: &state.download.history,
+                speed_unit: state.speed_unit,
+            },
         ),
     }
 }

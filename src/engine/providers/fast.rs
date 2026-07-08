@@ -124,6 +124,7 @@ pub fn parse_targets(json: &str) -> EngineResult<Vec<Server>> {
                     download: with_range(&url, DOWNLOAD_RANGE_BYTES),
                     upload: with_range(&url, DOWNLOAD_RANGE_BYTES),
                 },
+                probe_ms: None,
             })
         })
         .collect();

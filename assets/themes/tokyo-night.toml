@@ -1,0 +1,19 @@
+# netspd Tokyo Night theme — deep navy, vivid accents.
+name = "Tokyo Night"
+
+[colors]
+background = "#1a1b26"
+surface    = "#24283b"
+overlay    = "#2e3248"
+text       = "#c0caf5"
+subtext    = "#9aa5ce"
+muted      = "#565f89"
+border     = "#3b3f5c"
+accent     = "#7aa2f7"
+accent_alt = "#bb9af7"
+success    = "#9ece6a"
+warning    = "#e0af68"
+danger     = "#f7768e"
+download   = "#2ac3de"
+upload     = "#bb9af7"
+latency    = "#73daca"

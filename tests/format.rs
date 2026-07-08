@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use netspd::utils::format::{
     format_bps, format_bytes, format_duration, format_eta, format_millis, split_bps,
+    split_bps_unit, SpeedUnit,
 };
 
 #[test]
@@ -49,4 +50,34 @@ fn eta_renders_compactly() {
 fn millis_adapt_precision() {
     assert_eq!(format_millis(12.44), "12.4 ms");
     assert_eq!(format_millis(234.6), "235 ms");
+}
+
+#[test]
+fn split_bps_unit_bits_same_as_split_bps() {
+    let (v1, u1) = split_bps(142_500_000.0);
+    let (v2, u2) = split_bps_unit(142_500_000.0, SpeedUnit::Bits);
+    assert_eq!(v1, v2);
+    assert_eq!(u1, u2);
+}
+
+#[test]
+fn split_bps_unit_bytes_converts_correctly() {
+    // 800 Mbps = 100 MB/s
+    let (value, unit) = split_bps_unit(800_000_000.0, SpeedUnit::Bytes);
+    assert_eq!(unit, "MB/s");
+    assert_eq!(value, "100.0");
+}
+
+#[test]
+fn split_bps_unit_bytes_sub_megabyte() {
+    // 800 Kbps = 100 KB/s
+    let (value, unit) = split_bps_unit(800_000.0, SpeedUnit::Bytes);
+    assert_eq!(unit, "KB/s");
+    assert_eq!(value, "100.0");
+}
+
+#[test]
+fn speed_unit_toggle_cycles() {
+    assert_eq!(SpeedUnit::Bits.toggle(), SpeedUnit::Bytes);
+    assert_eq!(SpeedUnit::Bytes.toggle(), SpeedUnit::Bits);
 }

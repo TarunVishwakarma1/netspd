@@ -112,5 +112,6 @@ fn server_for_host(name: &str, host: &str) -> Server {
             download: format!("{base}{DOWNLOAD_ASSET}"),
             upload: format!("{base}upload.php"),
         },
+        probe_ms: None,
     }
 }

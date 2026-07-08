@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
+use crate::app::score::CompositeScore;
 use crate::engine::models::{Server, TestPhase, TestReport};
 use crate::engine::{Engine, EngineEvent};
 use crate::utils::format::{format_bps, format_bytes, format_millis};
@@ -41,6 +42,8 @@ pub struct Options {
     pub fail_below: Option<f64>,
     /// Write Prometheus metrics here after each completed run.
     pub prom_textfile: Option<std::path::PathBuf>,
+    /// Emit one compact line on stdout (for tmux / status bars).
+    pub one_line: bool,
 }
 
 /// Runs headless: a single test, a server listing, or — with an
@@ -54,7 +57,7 @@ pub struct Options {
 /// scheduled testing is for.
 pub async fn run(engine: Engine, options: Options) -> anyhow::Result<()> {
     let log = |line: String| {
-        if !options.json && !options.csv {
+        if !options.json && !options.csv && !options.one_line {
             eprintln!("{line}");
         }
     };
@@ -229,6 +232,8 @@ async fn test_once(
                     println!("{}", record.to_json().context("failed to encode report")?);
                 } else if options.csv {
                     println!("{}", record.to_csv_row());
+                } else if options.one_line {
+                    println!("{}", format_one_line(&report));
                 } else {
                     println!(
                         "{}: ↓ {} ↑ {} ping {}",
@@ -297,6 +302,19 @@ async fn run_once(
         return Err(anyhow!(message));
     }
     report.ok_or_else(|| anyhow!("test produced no report"))
+}
+
+/// Formats a completed report as a single compact line for tmux/status bars.
+///
+/// Example output: `↓93.7 ↑66.1 ~12ms A+`
+///
+/// Fields: download Mbps · upload Mbps · ping with `~` prefix · score grade.
+fn format_one_line(report: &TestReport) -> String {
+    let dl = report.download.average_bps / 1_000_000.0;
+    let ul = report.upload.average_bps / 1_000_000.0;
+    let ping = report.latency.average_ms.round() as u64;
+    let grade = CompositeScore::compute(report).grade.label();
+    format!("↓{dl:.1} ↑{ul:.1} ~{ping}ms {grade}")
 }
 
 /// Logs one engine event and captures the terminal outcomes.

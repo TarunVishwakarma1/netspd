@@ -4,6 +4,75 @@ All notable changes to netspd are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.6] - 2026-07-07
+
+### Added
+
+- **Wallpaper support** (`[wallpaper]` in `config.toml`): a vertical
+  colour gradient can be rendered behind all UI elements. `kind =
+  "gradient"` activates it; `from` and `to` (both `#rrggbb`, optional)
+  set the top and bottom colours — unset values default to the theme's
+  background and a 50 %-darkened version of it.
+- **Theme selector swatches**: every entry shows a five-colour preview
+  bar (accent, download, upload, success, warning) beside its name.
+- **Mbps ↔ MB/s toggle**: press `u` at any time (during test or on
+  results) to flip speed display between Mbps and MB/s (divide by 8).
+  Unit persists across screens and is reflected in all gauges, dials
+  and the results summary.
+- **Composite score**: results screen now shows a weighted 0–100 score
+  and letter grade (A+–F). Weights: download 30 %, upload 20 %, ping
+  25 %, jitter 10 %, bufferbloat 15 % (redistributed proportionally
+  when bufferbloat data is unavailable).
+- **Desktop notification**: a system notification fires when a test
+  completes (Unix only, via `notify-rust`). Shows download, upload and
+  ping in the body. Disable with `notify = false` in `config.toml`.
+- **One-line mode** (`--one-line`): prints a single tmux/status-bar
+  friendly line to stdout — `↓93.7 ↑66.1 ~12ms A+` — then exits.
+  Incompatible with `--json`, `--csv` and `--no-tui`.
+- **Ping histogram**: the ping card on the results screen now shows an
+  8-bucket Unicode block histogram (`▁▂▃▄▅▆▇█`) with a min–max range
+  label. Rendered only when ≥ 3 samples with > 0.5 ms spread exist.
+- **Server latency in server list**: each row in the server picker now
+  shows the measured probe latency (`~14ms`), coloured in the latency
+  accent. Servers are already sorted nearest-first; this makes the
+  ordering transparent.
+
+### Fixed
+
+- **Upload progress bar snapped to half**: the bar was gated on the first
+  counted byte, but an upload counts bytes only when a whole request
+  completes — several seconds on a slow uplink. The bar sat empty, then
+  jumped to the elapsed-time ratio the instant the first body landed. The
+  bar now tracks elapsed time for the whole phase, and each upload worker
+  sends a small warm-up body first so the gauge reads a real speed within
+  the first sampling intervals instead of after the first full body.
+- **Terminal cursor desync after a test**: the dial canvas and progress
+  bar push many escape sequences per frame; dropped sequences could leave
+  the terminal cursor out of sync with ratatui's model, landing text in
+  the wrong cells on the results screen. The screen is now cleared on the
+  transition off the testing screen. The clear sends `ESC[2J` +
+  `MoveTo(0, 0)` directly and invalidates ratatui's diff buffer via
+  `Terminal::resize`, rather than `Terminal::clear()` which queries the
+  cursor position (`ESC[6n`) and could time out while the pty was still
+  draining — the timeout previously crashed the process.
+- **Duplicate footer bar on results screen**: two keyhint rows were
+  visible (one from the screen, one from the global renderer). The
+  per-screen footer was removed; all hint/notice/countdown logic now
+  lives in `footer.rs` and renders exactly one row.
+
+### Changed (internal)
+
+- `app/state.rs` split into `screen.rs` (`Screen` enum) and `views.rs`
+  (`PingView`, `TransferView`) to keep each file focused on one concern.
+- Footer hint tables and the results-screen notice/countdown override
+  moved from `renderer.rs` into `footer.rs` (`render_frame`).
+- `download_card.rs` and `upload_card.rs` (19-line near-identical
+  wrappers) deleted; replaced by `transfer_card::render_download` /
+  `render_upload` in the existing `transfer_card.rs`.
+- Wallpaper rendering extracted to `tui/wallpaper.rs`; the renderer's
+  background pass is now a single `wallpaper::render` call that handles
+  both solid and gradient modes.
+
 ## [0.1.5] - 2026-07-04
 
 ### Fixed
@@ -156,7 +225,9 @@ All notable changes to netspd are documented here. The format follows
   theme selection, error — responsive from 80×24 up to 4K terminals.
 - Configuration via `config.toml` with sensible defaults and clamping.
 
-[Unreleased]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/TarunVishwakarma1/netspd/compare/v0.1.1...v0.1.2

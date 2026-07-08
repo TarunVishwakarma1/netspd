@@ -11,7 +11,7 @@ use netspd::config;
 use netspd::engine::{providers, Engine};
 use netspd::tui::renderer::Renderer;
 use netspd::tui::terminal::{install_panic_hook, Tui};
-use netspd::tui::theme::Theme;
+use netspd::tui::theme_registry::ThemeRegistry;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -112,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
         let options = headless::Options {
             json: cli.json,
             csv: cli.csv,
+            one_line: cli.one_line,
             server: cli.server,
             list_servers: cli.list_servers,
             interval: repeat,
@@ -125,13 +126,14 @@ async fn main() -> anyhow::Result<()> {
     netspd::tui::glyphs::select(cli.ascii);
 
     let themes_dir = dirs::config_dir().map(|dir| dir.join("netspd").join("themes"));
-    let mut themes = Theme::load_all(themes_dir.as_deref()).context("failed to load themes")?;
-    // https://no-color.org: any non-empty NO_COLOR disables all colors.
+    let mut registry =
+        ThemeRegistry::load(themes_dir.as_deref()).context("failed to load themes")?;
+    // https://no-color.org: any non-empty NO_COLOR disables all colours.
     if std::env::var("NO_COLOR").is_ok_and(|value| !value.is_empty()) {
-        themes = themes.iter().map(Theme::without_colors).collect();
+        registry = registry.without_colors();
     }
 
-    let renderer = Renderer::new(themes, settings.animation_speed());
+    let renderer = Renderer::new(registry, settings.animation_speed());
     let mut state = AppState::new(
         settings.clone(),
         renderer.theme_names(),

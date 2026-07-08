@@ -1,47 +1,43 @@
 //! Tests for the shareable result card.
 
-use std::time::Duration;
+mod common;
 
 use netspd::app::share::share_text;
-use netspd::engine::models::{LatencyStats, TestReport, TransferStats};
 
 #[test]
 fn share_card_contains_the_headline_figures() {
-    let report = TestReport {
-        server_name: "Tokyo, Japan (A573)".to_owned(),
-        latency: LatencyStats {
-            average_ms: 141.2,
-            jitter_ms: 1.0,
-            min_ms: 138.0,
-            max_ms: 150.0,
-            samples: 10,
-            packet_loss_pct: 0.0,
-        },
-        download: TransferStats {
-            bytes: 100_000_000,
-            duration: Duration::from_secs(10),
-            average_bps: 104_900_000.0,
-            peak_bps: 206_500_000.0,
-        },
-        upload: TransferStats {
-            bytes: 40_000_000,
-            duration: Duration::from_secs(10),
-            average_bps: 36_300_000.0,
-            peak_bps: 51_900_000.0,
-        },
-        bufferbloat: None,
-    };
+    let report = common::ReportBuilder::new()
+        .server("Tokyo, Japan (A573)")
+        .download(104.9)
+        .upload(36.3)
+        .ping(141.2)
+        .jitter(1.0)
+        .loss(0.0)
+        .build();
+
     let card = share_text(&report, "LibreSpeed");
-    // Without a bufferbloat measurement the card omits the grade.
-    assert!(!card.contains("bufferbloat"));
+    assert!(
+        !card.contains("bufferbloat"),
+        "no grade without measurement"
+    );
     assert!(card.contains("Tokyo, Japan (A573)"));
     assert!(card.contains("↓ 104.9 Mbps"));
     assert!(card.contains("↑ 36.3 Mbps"));
     assert!(card.contains("ping 141 ms"));
     assert!(card.contains("loss 0%"));
     assert!(card.contains("via LibreSpeed"));
-    // Plain-language verdict rides along.
-    assert!(card.contains("4K streaming"));
-    // Compact: four lines, ready for a chat message.
-    assert_eq!(card.lines().count(), 4);
+    assert!(card.contains("4K streaming"), "verdict should mention 4K");
+    assert_eq!(card.lines().count(), 4, "compact four-line card");
+}
+
+#[test]
+fn share_card_includes_bufferbloat_grade() {
+    let report = common::ReportBuilder::new()
+        .download(150.0)
+        .upload(80.0)
+        .bufferbloat(20.0, 45.0, 30.0)
+        .build();
+
+    let card = share_text(&report, "Ookla");
+    assert!(card.contains("bufferbloat"));
 }

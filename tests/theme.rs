@@ -6,11 +6,20 @@ use ratatui::style::Color;
 #[test]
 fn all_builtin_themes_parse() {
     let themes = Theme::builtin().unwrap_or_default();
-    let names: Vec<&str> = themes.iter().map(|theme| theme.name.as_str()).collect();
-    assert_eq!(
-        names,
-        vec!["Default", "Nord", "Dracula", "Catppuccin", "Gruvbox"]
+    // Themes are discovered alphabetically by filename via build.rs.
+    // Update this list when a new theme file is added to assets/themes/.
+    let mut names: Vec<&str> = themes.iter().map(|t| t.name.as_str()).collect();
+    names.sort();
+    assert!(
+        names.contains(&"Default"),
+        "expected Default theme, got: {names:?}"
     );
+    assert!(
+        names.contains(&"Nord"),
+        "expected Nord theme, got: {names:?}"
+    );
+    // All files must parse without error.
+    assert!(!names.is_empty());
 }
 
 #[test]

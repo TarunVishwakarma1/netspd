@@ -48,6 +48,9 @@ pub struct App {
     cancel: CancellationToken,
     failover_attempts: usize,
     prom_textfile: Option<std::path::PathBuf>,
+    /// The screen rendered on the previous draw call; used to detect
+    /// transitions that need a full terminal clear.
+    last_drawn_screen: Option<Screen>,
 }
 
 impl App {
@@ -75,6 +78,7 @@ impl App {
             cancel: CancellationToken::new(),
             failover_attempts: 0,
             prom_textfile: None,
+            last_drawn_screen: None,
         }
     }
 
@@ -163,6 +167,13 @@ impl App {
                         if let Some(path) = &self.prom_textfile {
                             let _ =
                                 super::prom::write_textfile(path, report, self.state.provider_name);
+                        }
+                        if self.state.settings.notify {
+                            let report_clone = report.clone();
+                            let provider = self.state.provider_name;
+                            tokio::task::spawn_blocking(move || {
+                                super::notify::fire(&report_clone, provider);
+                            });
                         }
                     }
                     self.state.apply_engine_event(engine_event);
@@ -368,6 +379,24 @@ impl App {
 
     /// Renders one frame.
     fn draw(&mut self, tui: &mut Tui, dt: f64) -> Result<()> {
+        let current = self.state.screen;
+        // After a test, the dial canvas and progress bar push many escape
+        // sequences per frame. Dropped sequences leave the terminal cursor
+        // position out of sync with ratatui's model, causing characters to
+        // land in wrong cells on the results screen. A full clear fixes it.
+        //
+        // Only clear on the transition to a settled full screen (Results,
+        // Error, Splash). Opening an overlay mid-test also moves `screen`
+        // away from Testing, but the test is still running and the overlay
+        // draws over a live Testing background — clearing there would blank-
+        // flash for no benefit.
+        if self.last_drawn_screen == Some(Screen::Testing)
+            && current != Screen::Testing
+            && !current.is_overlay()
+        {
+            tui.clear()?;
+        }
+        self.last_drawn_screen = Some(current);
         let renderer = &mut self.renderer;
         let state = &self.state;
         tui.draw(|frame| renderer.render(frame, state, dt))?;

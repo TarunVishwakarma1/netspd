@@ -89,6 +89,12 @@ pub struct Cli {
     /// each completed run
     #[arg(long, value_name = "PATH", env = "NETSPD_PROM_TEXTFILE")]
     pub prom_textfile: Option<std::path::PathBuf>,
+
+    /// Print a single compact line on stdout and exit — ideal for tmux
+    /// status bars, i3bar, waybar, and shell prompts.
+    /// Output: `↓93.7 ↑66.1 ~12ms A+`
+    #[arg(long, conflicts_with_all = ["json", "csv", "no_tui"])]
+    pub one_line: bool,
 }
 
 /// Alternate modes.
@@ -134,6 +140,7 @@ impl Cli {
         self.no_tui
             || self.json
             || self.csv
+            || self.one_line
             || self.list_servers
             || self.list_providers
             || self.compare.is_some()

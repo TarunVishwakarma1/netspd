@@ -1,4 +1,8 @@
 //! The latency metrics card.
+//!
+//! On the results screen (`active = false`) a compact histogram of ping
+//! sample distribution is appended below the stats rows so users can
+//! see at a glance whether latency was consistent or spiky.
 
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -10,7 +14,18 @@ use crate::app::state::PingView;
 use crate::tui::theme::Theme;
 use crate::utils::format::format_millis;
 
+/// Block-character bar heights, index 0 (empty) through 8 (full).
+const BAR: [&str; 9] = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+
+/// Number of histogram buckets.
+const BINS: usize = 8;
+
+/// Minimum samples required to render a meaningful histogram.
+const MIN_SAMPLES: usize = 3;
+
 /// Renders the ping card: headline latency plus jitter, range and loss.
+/// When `active` is false (results screen) and enough samples exist, a
+/// one-line histogram of the latency distribution is appended.
 pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, view: &PingView, active: bool) {
     if area.height == 0 {
         return;
@@ -62,7 +77,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, view: &PingView, act
 
     let label = Style::default().fg(colors.subtext);
     let value = Style::default().fg(colors.text);
-    let lines = vec![
+    let mut lines = vec![
         Line::from(Span::styled(
             headline,
             Style::default()
@@ -82,5 +97,58 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, view: &PingView, act
             Span::styled(loss, value),
         ]),
     ];
+
+    if !active {
+        if let Some(hist) = build_histogram_line(&view.history, colors.latency, colors.muted) {
+            lines.push(hist);
+        }
+    }
+
     frame.render_widget(Paragraph::new(lines), inner);
+}
+
+// ── Histogram ────────────────────────────────────────────────────────────────
+
+/// Builds a single `Line` showing a block-char histogram of ping samples
+/// followed by a `min – max` range label. Returns `None` when there are
+/// not enough samples or all samples are identical.
+fn build_histogram_line(
+    history: &crate::engine::metrics::Sampler,
+    bar_color: ratatui::style::Color,
+    label_color: ratatui::style::Color,
+) -> Option<Line<'static>> {
+    if history.len() < MIN_SAMPLES {
+        return None;
+    }
+    let lo = history.min()?;
+    let hi = history.max()?;
+    if hi - lo < 0.5 {
+        return None;
+    }
+
+    let counts = bucket(history, lo, hi);
+    let peak = counts.iter().copied().max().unwrap_or(1).max(1);
+    let bars: String = counts
+        .iter()
+        .map(|&c| BAR[(c * 8 / peak).min(8) as usize])
+        .collect();
+
+    let range_label = format!("  {} – {}", format_millis(lo), format_millis(hi));
+
+    Some(Line::from(vec![
+        Span::styled(bars, Style::default().fg(bar_color)),
+        Span::styled(range_label, Style::default().fg(label_color)),
+    ]))
+}
+
+/// Distributes samples into `BINS` equally-spaced buckets between `lo` and
+/// `hi`, returning the count in each bucket.
+fn bucket(history: &crate::engine::metrics::Sampler, lo: f64, hi: f64) -> [u32; BINS] {
+    let span = hi - lo;
+    let mut counts = [0u32; BINS];
+    for s in history.iter() {
+        let idx = ((s - lo) / span * BINS as f64).floor() as usize;
+        counts[idx.min(BINS - 1)] += 1;
+    }
+    counts
 }

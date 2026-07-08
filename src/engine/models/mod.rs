@@ -10,5 +10,7 @@ mod server;
 
 pub use phase::TestPhase;
 pub use progress::TransferProgress;
-pub use report::{Bufferbloat, BufferbloatGrade, LatencyStats, TestReport, TransferStats};
+pub use report::{
+    Bufferbloat, BufferbloatGrade, IpVersion, LatencyStats, TestReport, TransferStats,
+};
 pub use server::{Endpoints, Server};

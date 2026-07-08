@@ -7,7 +7,6 @@
 pub mod completion;
 pub mod dial_gauge;
 pub mod digits;
-pub mod download_card;
 pub mod error_popup;
 pub mod footer;
 pub mod header;
@@ -18,4 +17,3 @@ pub mod speed_gauge;
 pub mod spinner;
 pub mod status_bar;
 pub mod transfer_card;
-pub mod upload_card;

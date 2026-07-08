@@ -23,6 +23,10 @@ animation_speed = 1.0
 # Unset disables auto-repeat.
 # repeat_interval = "15m"
 
+# Send a desktop notification when each test finishes (macOS / Linux).
+# Set to false to disable.
+notify = true
+
 [engine]
 # Number of HTTP latency samples collected during the ping phase.
 ping_samples = 10

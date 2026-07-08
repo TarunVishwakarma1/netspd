@@ -33,6 +33,8 @@ pub enum Action {
     Confirm,
     /// Write the current settings to the config file.
     SaveConfig,
+    /// Cycle the speed unit between Mbps and MB/s.
+    ToggleUnit,
 }
 
 /// A side effect the controller asks the runtime to perform.

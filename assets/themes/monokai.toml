@@ -1,0 +1,19 @@
+# netspd Monokai theme — charcoal base, vivid classic editor accents.
+name = "Monokai"
+
+[colors]
+background = "#272822"
+surface    = "#3e3d32"
+overlay    = "#49483e"
+text       = "#f8f8f2"
+subtext    = "#cfcfc2"
+muted      = "#75715e"
+border     = "#49483e"
+accent     = "#66d9e8"
+accent_alt = "#ae81ff"
+success    = "#a6e22e"
+warning    = "#e6db74"
+danger     = "#f92672"
+download   = "#66d9e8"
+upload     = "#ae81ff"
+latency    = "#a6e22e"

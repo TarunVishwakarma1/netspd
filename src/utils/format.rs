@@ -4,7 +4,30 @@ use std::time::Duration;
 
 const BPS_UNITS: [&str; 5] = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
 const BYTE_UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+// MB/s units scale in binary-like steps: B/s, KB/s, MB/s, GB/s, TB/s
+const BPS_BYTE_UNITS: [&str; 5] = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
 const STEP: f64 = 1000.0;
+
+/// Whether to display speeds in bits per second or bytes per second.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SpeedUnit {
+    /// Display as Mbps / Gbps (default, industry-standard for ISPs).
+    #[default]
+    Bits,
+    /// Display as MB/s / GB/s (preferred by some power users).
+    Bytes,
+}
+
+impl SpeedUnit {
+    /// Cycle to the next unit.
+    #[must_use]
+    pub fn toggle(self) -> Self {
+        match self {
+            Self::Bits => Self::Bytes,
+            Self::Bytes => Self::Bits,
+        }
+    }
+}
 
 /// Formats a bits-per-second value as a compact human string,
 /// e.g. `142.5 Mbps`.
@@ -14,12 +37,32 @@ pub fn format_bps(bps: f64) -> String {
     format!("{value:.1} {unit}")
 }
 
-/// Splits a bits-per-second value into a numeric string and its unit,
-/// e.g. `("142.5", "Mbps")`. Useful when the UI styles them separately.
+/// Splits a bits-per-second value into a numeric string and its unit
+/// label, respecting the requested [`SpeedUnit`].
+///
+/// Examples:
+/// - `Bits`:  `("142.5", "Mbps")`
+/// - `Bytes`: `("17.8",  "MB/s")`
+#[must_use]
+pub fn split_bps_unit(bps: f64, unit: SpeedUnit) -> (String, &'static str) {
+    match unit {
+        SpeedUnit::Bits => {
+            let (value, label) = scale(bps.max(0.0), &BPS_UNITS);
+            (format!("{value:.1}"), label)
+        }
+        SpeedUnit::Bytes => {
+            let bytes_per_sec = bps.max(0.0) / 8.0;
+            let (value, label) = scale(bytes_per_sec, &BPS_BYTE_UNITS);
+            (format!("{value:.1}"), label)
+        }
+    }
+}
+
+/// Splits a bits-per-second value into `("142.5", "Mbps")`.
+/// Equivalent to `split_bps_unit(bps, SpeedUnit::Bits)`.
 #[must_use]
 pub fn split_bps(bps: f64) -> (String, &'static str) {
-    let (value, unit) = scale(bps.max(0.0), &BPS_UNITS);
-    (format!("{value:.1}"), unit)
+    split_bps_unit(bps, SpeedUnit::Bits)
 }
 
 /// Formats a byte count as a compact human string, e.g. `1.24 GB`.

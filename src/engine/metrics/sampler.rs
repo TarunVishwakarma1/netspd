@@ -43,6 +43,15 @@ impl Sampler {
         self.samples.back().copied()
     }
 
+    /// The smallest sample currently in the window.
+    #[must_use]
+    pub fn min(&self) -> Option<f64> {
+        self.samples
+            .iter()
+            .copied()
+            .fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.min(s))))
+    }
+
     /// The largest sample currently in the window.
     #[must_use]
     pub fn max(&self) -> Option<f64> {

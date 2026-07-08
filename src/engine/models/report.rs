@@ -79,6 +79,16 @@ impl BufferbloatGrade {
             Self::F => "F",
         }
     }
+
+    /// Theme color for this grade (success → warning → danger).
+    #[must_use]
+    pub fn color(self, colors: &crate::tui::theme::Colors) -> ratatui::style::Color {
+        match self {
+            Self::APlus | Self::A => colors.success,
+            Self::B | Self::C => colors.warning,
+            _ => colors.danger,
+        }
+    }
 }
 
 /// Latency measured while the link is saturated, versus idle.
@@ -108,6 +118,26 @@ impl Bufferbloat {
     }
 }
 
+/// IP address family used for the test connections.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpVersion {
+    /// IPv4 connections.
+    V4,
+    /// IPv6 connections.
+    V6,
+}
+
+impl IpVersion {
+    /// Short display label shown in the results header.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::V4 => "IPv4",
+            Self::V6 => "IPv6",
+        }
+    }
+}
+
 /// The complete result of a speed test run.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestReport {
@@ -121,4 +151,6 @@ pub struct TestReport {
     pub upload: TransferStats,
     /// Latency under load, when the sampler collected enough data.
     pub bufferbloat: Option<Bufferbloat>,
+    /// IP version actually used, when determinable.
+    pub ip_version: Option<IpVersion>,
 }

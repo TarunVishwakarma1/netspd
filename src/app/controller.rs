@@ -32,6 +32,7 @@ pub fn map_key(screen: Screen, key: KeyEvent) -> Option<Action> {
         KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
         KeyCode::Left | KeyCode::Char('h') => Some(Action::MoveLeft),
         KeyCode::Right | KeyCode::Char('l') => Some(Action::MoveRight),
+        KeyCode::Char('u') => Some(Action::ToggleUnit),
         KeyCode::Char('w') if screen == Screen::Settings => Some(Action::SaveConfig),
         KeyCode::Enter => Some(Action::Confirm),
         _ => None,
@@ -116,6 +117,10 @@ pub fn handle(state: &mut AppState, action: Action) -> Command {
         Action::MoveRight => adjust(state, 1),
         Action::SaveConfig => Command::SaveConfig,
         Action::Confirm => confirm(state),
+        Action::ToggleUnit => {
+            state.speed_unit = state.speed_unit.toggle();
+            Command::None
+        }
     }
 }
 

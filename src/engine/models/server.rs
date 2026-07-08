@@ -12,7 +12,7 @@ pub struct Endpoints {
 }
 
 /// A single speed test server offered by a provider.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Server {
     /// Display name, usually including the server's location.
     pub name: String,
@@ -20,6 +20,10 @@ pub struct Server {
     pub description: String,
     /// Resolved endpoints for every test phase.
     pub endpoints: Endpoints,
+    /// Round-trip latency measured during health probing, in milliseconds.
+    /// `None` before the probe completes or when the server was added
+    /// manually (e.g. via `--url` or `[[servers]]` config).
+    pub probe_ms: Option<f64>,
 }
 
 impl Server {
@@ -46,6 +50,7 @@ impl Server {
                 download: join(&base, download_path),
                 upload: join(&base, upload_path),
             },
+            probe_ms: None,
         }
     }
 

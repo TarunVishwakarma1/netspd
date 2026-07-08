@@ -30,6 +30,7 @@ netspd measures **ping, jitter, download and upload** against LibreSpeed-compati
 - **Shareable results** — `y` copies a paste-anywhere result card to the clipboard
 - **Result history** — every run appended as JSON lines to your data directory
 - **Streaming transfers** — nothing buffered in memory; parallel connections with EMA smoothing
+- **Wallpaper** — set `kind = "gradient"` under `[wallpaper]` in `config.toml` for a vertical colour gradient behind the UI
 - **Themes** — Default, Nord, Dracula, Catppuccin, Gruvbox, plus your own TOML themes without recompiling
 - **Responsive layout** — adapts from 80×24 up to 4K terminals; mouse wheel and click work in lists
 - **Plays nice everywhere** — `--ascii` for fonts without braille/blocks, `NO_COLOR` respected, `-4`/`-6` to force an address family
@@ -105,6 +106,7 @@ With `--interval` (or `repeat_interval` in config) the TUI shows a countdown on 
 | --- | --- |
 | `q` / `Esc` | Quit (Esc closes overlays first) |
 | `r` | Restart the test |
+| `u` | Toggle speed unit — Mbps ↔ MB/s |
 | `y` | Copy a shareable result card to the clipboard |
 | `g` | Result trends from your history |
 | `s` | Server selection |
@@ -157,11 +159,17 @@ theme = "catppuccin"       # default | nord | dracula | catppuccin | gruvbox
 refresh_rate = 30          # UI frames per second (1..=60)
 provider = "librespeed"    # librespeed | ookla | fast | custom
 animation_speed = 1.0
+notify = true              # desktop notification on test complete (Unix)
 
 [engine]
 duration_secs = 10         # length of each transfer phase
 connections = 4            # parallel connections
 ping_samples = 10
+
+[wallpaper]
+kind = "gradient"          # "none" (default solid bg) | "gradient"
+# from = "#0d1117"         # gradient top colour — omit to use theme background
+# to   = "#000000"         # gradient bottom colour — omit to use 50%-darkened bg
 
 [[servers]]                # optional: pin your own backend
 name = "My Server"
@@ -206,7 +214,7 @@ netspd is a single static binary that plays **both roles**: client and server. T
 Add it to any image (the musl binary has zero runtime dependencies):
 
 ```dockerfile
-ARG NETSPD_VERSION=v0.1.5
+ARG NETSPD_VERSION=v0.1.6
 ADD https://github.com/TarunVishwakarma1/netspd/releases/download/${NETSPD_VERSION}/netspd-${NETSPD_VERSION}-x86_64-unknown-linux-musl.tar.gz /tmp/
 RUN tar -xzf /tmp/netspd-*.tar.gz --strip-components=1 -C /usr/local/bin --wildcards '*/netspd' && rm /tmp/netspd-*.tar.gz
 ```
@@ -317,6 +325,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the layering rules and PR checklist.
 - [x] Homebrew tap
 - [x] Ookla and Fast.com providers
 - [x] Scheduled repeat testing (`--interval`)
+- [x] Gradient wallpaper support (`[wallpaper]` in config)
 
 ## License
 

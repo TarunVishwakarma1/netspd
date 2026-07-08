@@ -20,7 +20,7 @@ use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 use crate::tui::theme::{blend, Colors, Theme};
-use crate::utils::format::split_bps;
+use crate::utils::format::{split_bps_unit, SpeedUnit};
 
 use super::digits;
 
@@ -68,6 +68,8 @@ pub struct DialData<'a> {
     pub override_ratio: Option<f64>,
     /// Renders the dial in a muted palette (inactive twin in a cluster).
     pub dimmed: bool,
+    /// Whether to display speeds in Mbps or MB/s.
+    pub speed_unit: SpeedUnit,
 }
 
 /// Picks a round dial maximum, in bits per second, for an observed peak.
@@ -296,7 +298,7 @@ fn render_readout(
     palette: &DialPalette,
     colors: &Colors,
 ) {
-    let (value, unit) = split_bps(data.bps);
+    let (value, unit) = split_bps_unit(data.bps, data.speed_unit);
     if area.height >= digits::FONT_HEIGHT as u16 {
         digits::render_value(frame, area, &value, unit, palette.phase, colors.muted);
         return;

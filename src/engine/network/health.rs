@@ -51,5 +51,11 @@ pub async fn filter_reachable(client: &Client, servers: Vec<Server>) -> Vec<Serv
         .collect()
         .await;
     healthy.sort_by_key(|(latency, _)| *latency);
-    healthy.into_iter().map(|(_, server)| server).collect()
+    healthy
+        .into_iter()
+        .map(|(duration, mut server)| {
+            server.probe_ms = Some(duration.as_secs_f64() * 1000.0);
+            server
+        })
+        .collect()
 }

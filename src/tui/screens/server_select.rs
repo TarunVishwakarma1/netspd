@@ -76,6 +76,13 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
             } else {
                 Style::default().fg(colors.text)
             };
+            let latency_span = match server.probe_ms {
+                Some(ms) => Span::styled(
+                    format!("  ~{:.0}ms", ms),
+                    Style::default().fg(colors.latency),
+                ),
+                None => Span::raw(""),
+            };
             Line::from(vec![
                 Span::styled(marker, Style::default().fg(colors.accent)),
                 Span::styled(server.name.clone(), name_style),
@@ -83,6 +90,7 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, state: &AppState) {
                     format!("  {}", server.description),
                     Style::default().fg(colors.muted),
                 ),
+                latency_span,
                 Span::styled(active_mark, Style::default().fg(colors.success)),
             ])
         })

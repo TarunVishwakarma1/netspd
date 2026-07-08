@@ -6,130 +6,12 @@
 use std::time::{Duration, Instant};
 
 use crate::config::Settings;
-use crate::engine::metrics::Sampler;
-use crate::engine::models::{LatencyStats, Server, TestPhase, TestReport, TransferStats};
+use crate::engine::models::{Server, TestPhase, TestReport};
 use crate::engine::EngineEvent;
+use crate::utils::format::SpeedUnit;
 
-/// Number of speed samples kept for sparklines.
-const HISTORY_CAPACITY: usize = 120;
-
-/// The screen currently in the foreground.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Screen {
-    /// Startup splash while servers are discovered.
-    Splash,
-    /// A test is running.
-    Testing,
-    /// Final results of a completed test.
-    Results,
-    /// Keyboard shortcut reference.
-    Help,
-    /// Read-only view of the active configuration.
-    Settings,
-    /// Server selection list.
-    ServerSelect,
-    /// Theme selection list.
-    ThemeSelect,
-    /// Past results and trends.
-    Trends,
-    /// A fatal test error.
-    Error,
-}
-
-impl Screen {
-    /// Whether this screen is an overlay that returns to a parent screen.
-    #[must_use]
-    pub fn is_overlay(self) -> bool {
-        matches!(
-            self,
-            Self::Help | Self::Settings | Self::ServerSelect | Self::ThemeSelect | Self::Trends
-        )
-    }
-
-    /// Whether this screen animates continuously and needs steady redraws.
-    #[must_use]
-    pub fn is_animated(self) -> bool {
-        matches!(self, Self::Splash | Self::Testing)
-    }
-}
-
-/// Live view of the ping phase.
-#[derive(Debug, Clone)]
-pub struct PingView {
-    /// Most recent sample, in milliseconds.
-    pub last_ms: Option<f64>,
-    /// Number of samples completed so far.
-    pub samples_done: u32,
-    /// Final statistics, once the phase completes.
-    pub stats: Option<LatencyStats>,
-    /// Recent samples for the sparkline.
-    pub history: Sampler,
-}
-
-impl PingView {
-    fn new() -> Self {
-        Self {
-            last_ms: None,
-            samples_done: 0,
-            stats: None,
-            history: Sampler::new(HISTORY_CAPACITY),
-        }
-    }
-
-    fn reset(&mut self) {
-        self.last_ms = None;
-        self.samples_done = 0;
-        self.stats = None;
-        self.history.clear();
-    }
-}
-
-/// Live view of a download or upload phase.
-#[derive(Debug, Clone)]
-pub struct TransferView {
-    /// Bytes transferred so far.
-    pub bytes: u64,
-    /// Smoothed instantaneous speed, in bits per second.
-    pub current_bps: f64,
-    /// Average speed, in bits per second.
-    pub average_bps: f64,
-    /// Peak smoothed speed, in bits per second.
-    pub peak_bps: f64,
-    /// Estimated time remaining in this phase.
-    pub eta: Duration,
-    /// Phase completion in `0.0..=1.0`.
-    pub ratio: f64,
-    /// Recent speed samples for the sparkline.
-    pub history: Sampler,
-    /// Final statistics, once the phase completes.
-    pub stats: Option<TransferStats>,
-}
-
-impl TransferView {
-    fn new() -> Self {
-        Self {
-            bytes: 0,
-            current_bps: 0.0,
-            average_bps: 0.0,
-            peak_bps: 0.0,
-            eta: Duration::ZERO,
-            ratio: 0.0,
-            history: Sampler::new(HISTORY_CAPACITY),
-            stats: None,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.bytes = 0;
-        self.current_bps = 0.0;
-        self.average_bps = 0.0;
-        self.peak_bps = 0.0;
-        self.eta = Duration::ZERO;
-        self.ratio = 0.0;
-        self.history.clear();
-        self.stats = None;
-    }
-}
+pub use super::screen::Screen;
+pub use super::views::{PingView, TransferView};
 
 /// The complete state of the application.
 #[derive(Debug)]
@@ -193,6 +75,8 @@ pub struct AppState {
     pub trends_filter: usize,
     /// Highlighted row on the settings screen.
     pub settings_cursor: usize,
+    /// Whether speeds are shown in Mbps or MB/s.
+    pub speed_unit: SpeedUnit,
     /// A transient status message (e.g. clipboard confirmation).
     notice: Option<(String, Instant)>,
     /// Set when the visible content changed and a redraw is required.
@@ -237,6 +121,7 @@ impl AppState {
             trends: Vec::new(),
             trends_filter: 0,
             settings_cursor: 0,
+            speed_unit: SpeedUnit::Bits,
             notice: None,
             dirty: true,
         }

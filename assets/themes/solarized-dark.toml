@@ -1,0 +1,19 @@
+# netspd Solarized Dark theme — Ethan Schoonover's Solarized, dark variant.
+name = "Solarized Dark"
+
+[colors]
+background = "#002b36"
+surface    = "#073642"
+overlay    = "#0d4454"
+text       = "#839496"
+subtext    = "#657b83"
+muted      = "#586e75"
+border     = "#104050"
+accent     = "#268bd2"
+accent_alt = "#2aa198"
+success    = "#859900"
+warning    = "#b58900"
+danger     = "#dc322f"
+download   = "#268bd2"
+upload     = "#d33682"
+latency    = "#2aa198"

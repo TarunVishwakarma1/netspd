@@ -7,8 +7,9 @@ use tokio_util::sync::CancellationToken;
 use crate::errors::EngineResult;
 
 use super::engine::EngineConfig;
+use super::engine::IpFamily;
 use super::event::{emit, EngineEvent};
-use super::models::{Bufferbloat, LatencyStats, Server, TestPhase, TestReport};
+use super::models::{Bufferbloat, IpVersion, LatencyStats, Server, TestPhase, TestReport};
 use super::network::{download, icmp, loaded_latency, ping, upload};
 
 /// Runs ping, download and upload in sequence against one server and
@@ -118,12 +119,17 @@ pub(crate) async fn run_sequence(
         _ => None,
     };
 
+    let ip_version = config.ip_family.map(|f| match f {
+        IpFamily::V4 => IpVersion::V4,
+        IpFamily::V6 => IpVersion::V6,
+    });
     Ok(TestReport {
         server_name: server.name.clone(),
         latency,
         download: download_stats,
         upload: upload_stats,
         bufferbloat,
+        ip_version,
     })
 }
 

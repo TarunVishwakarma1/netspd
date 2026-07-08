@@ -49,3 +49,21 @@ fn overrides_parse_numbers() -> Result<(), clap::Error> {
 fn unknown_flags_are_rejected() {
     assert!(Cli::try_parse_from(["netspd", "--bogus"]).is_err());
 }
+
+#[test]
+fn one_line_implies_headless() -> Result<(), clap::Error> {
+    let cli = Cli::try_parse_from(["netspd", "--one-line"])?;
+    assert!(cli.headless());
+    assert!(cli.one_line);
+    Ok(())
+}
+
+#[test]
+fn one_line_conflicts_with_json() {
+    assert!(Cli::try_parse_from(["netspd", "--one-line", "--json"]).is_err());
+}
+
+#[test]
+fn one_line_conflicts_with_no_tui() {
+    assert!(Cli::try_parse_from(["netspd", "--one-line", "--no-tui"]).is_err());
+}

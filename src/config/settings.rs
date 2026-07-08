@@ -28,8 +28,46 @@ pub struct Settings {
     /// Repeat the test on this interval, e.g. `"15m"` (min 30s).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repeat_interval: Option<String>,
+    /// Send a desktop notification when each test finishes (macOS / Linux).
+    pub notify: bool,
     /// Custom servers overriding provider discovery.
     pub servers: Vec<ServerEntry>,
+    /// Background wallpaper rendered behind all UI elements.
+    pub wallpaper: WallpaperSection,
+}
+
+/// What to render behind the UI — configured under `[wallpaper]`.
+///
+/// ```toml
+/// [wallpaper]
+/// kind = "gradient"
+/// from = "#0d1117"   # top colour (optional, defaults to theme background)
+/// to   = "#000000"   # bottom colour (optional, defaults to half-darkened bg)
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub struct WallpaperSection {
+    /// `"none"` (default solid theme background) or `"gradient"`.
+    pub kind: WallpaperKind,
+    /// Gradient start (top) colour as `#rrggbb`. Defaults to the active
+    /// theme's background colour when omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Gradient end (bottom) colour as `#rrggbb`. Defaults to a 50%-darkened
+    /// version of the theme background when omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+}
+
+/// The type of background wallpaper.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum WallpaperKind {
+    /// Solid fill using the theme's `background` colour (default).
+    #[default]
+    None,
+    /// Vertical colour gradient from `from` (top) to `to` (bottom).
+    Gradient,
 }
 
 impl Default for Settings {
@@ -41,7 +79,9 @@ impl Default for Settings {
             animation_speed: 1.0,
             engine: EngineSection::default(),
             repeat_interval: None,
+            notify: true,
             servers: Vec::new(),
+            wallpaper: WallpaperSection::default(),
         }
     }
 }

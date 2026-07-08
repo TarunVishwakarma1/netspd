@@ -4,8 +4,6 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::Style;
-use ratatui::widgets::Block;
 use ratatui::Frame;
 
 use crate::app::state::{AppState, Screen};
@@ -14,7 +12,8 @@ use crate::engine::models::TestPhase;
 use super::animation::{AnimatedValue, SpringValue};
 use super::screens;
 use super::theme::Theme;
-use super::widgets::footer::{self, Hint};
+use super::theme_registry::ThemeRegistry;
+use super::widgets::footer;
 use super::widgets::header;
 
 /// Spring stiffness for the needle: how hard it pulls toward the value.
@@ -85,7 +84,7 @@ impl NeedleAnim {
 /// The stateful renderer: owns the loaded themes and the animation state
 /// that eases displayed numbers toward their true values.
 pub struct Renderer {
-    themes: Vec<Theme>,
+    registry: ThemeRegistry,
     animation_speed: f64,
     download: NeedleAnim,
     upload: NeedleAnim,
@@ -101,9 +100,9 @@ impl Renderer {
     /// `animation_speed` scales how quickly displayed values chase their
     /// targets.
     #[must_use]
-    pub fn new(themes: Vec<Theme>, animation_speed: f64) -> Self {
+    pub fn new(registry: ThemeRegistry, animation_speed: f64) -> Self {
         Self {
-            themes,
+            registry,
             animation_speed,
             download: NeedleAnim::new(),
             upload: NeedleAnim::new(),
@@ -114,10 +113,10 @@ impl Renderer {
         }
     }
 
-    /// Names of all loaded themes, in selection order.
+    /// Display names of all themes, in index order.
     #[must_use]
     pub fn theme_names(&self) -> Vec<String> {
-        self.themes.iter().map(|theme| theme.name.clone()).collect()
+        self.registry.names()
     }
 
     /// Renders one complete frame from the current state.
@@ -126,10 +125,7 @@ impl Renderer {
         let theme = self.theme(state.theme_index);
         let area = frame.area();
 
-        frame.render_widget(
-            Block::default().style(Style::default().bg(theme.colors.background)),
-            area,
-        );
+        super::wallpaper::render(frame, area, &theme.colors, &state.settings.wallpaper);
 
         let [header_area, body_area, footer_area] = Layout::vertical([
             Constraint::Length(2),
@@ -146,7 +142,7 @@ impl Renderer {
             state.client_info.as_deref(),
         );
         self.render_body(frame, body_area, &theme, state, &motion);
-        footer::render(frame, footer_area, &theme, hints_for(state.screen));
+        footer::render_frame(frame, footer_area, &theme, state);
     }
 
     /// Advances animations toward the state's raw values.
@@ -198,13 +194,9 @@ impl Renderer {
         }
     }
 
-    /// The active theme, clamped to a valid index.
+    /// Resolves the active theme palette via the registry.
     fn theme(&self, index: usize) -> Theme {
-        let index = index.min(self.themes.len().saturating_sub(1));
-        self.themes
-            .get(index)
-            .cloned()
-            .unwrap_or_else(fallback_theme)
+        self.registry.resolve(index)
     }
 
     /// Renders the screen body; overlays draw on top of their parent.
@@ -225,7 +217,7 @@ impl Renderer {
             Screen::Settings => screens::settings::render(frame, area, theme, state),
             Screen::ServerSelect => screens::server_select::render(frame, area, theme, state),
             Screen::ThemeSelect => {
-                screens::theme_select::render(frame, area, theme, state, &self.themes);
+                screens::theme_select::render(frame, area, theme, state, &self.registry);
             }
             Screen::Trends => screens::trends::render(frame, area, theme, state),
             base => self.render_base(frame, area, theme, state, motion, base),
@@ -271,63 +263,4 @@ fn sweep_position(t: f64) -> f64 {
     let leg = if t < 0.5 { t / 0.5 } else { (1.0 - t) / 0.5 };
     // Smoothstep for a mechanical, non-linear throw.
     leg * leg * (3.0 - 2.0 * leg)
-}
-
-/// The footer hints for each screen.
-fn hints_for(screen: Screen) -> &'static [Hint] {
-    match screen {
-        Screen::Splash => &[("q", "quit"), ("?", "help")],
-        Screen::Testing => &[
-            ("q", "quit"),
-            ("r", "restart"),
-            ("s", "servers"),
-            ("t", "theme"),
-            ("?", "help"),
-        ],
-        Screen::Results => &[
-            ("r", "run again"),
-            ("y", "copy result"),
-            ("g", "trends"),
-            ("s", "servers"),
-            ("q", "quit"),
-        ],
-        Screen::Help => &[("Esc", "back"), ("q", "quit")],
-        Screen::Settings => &[
-            ("↑↓", "select"),
-            ("←→", "adjust"),
-            ("w", "save"),
-            ("Esc", "back"),
-        ],
-        Screen::Trends => &[("←→", "filter server"), ("Esc", "back"), ("q", "quit")],
-        Screen::ServerSelect | Screen::ThemeSelect => {
-            &[("↑↓", "navigate"), ("Enter", "select"), ("Esc", "back")]
-        }
-        Screen::Error => &[("r", "retry"), ("s", "servers"), ("q", "quit")],
-    }
-}
-
-/// A minimal, always-available theme used only if no theme loaded.
-fn fallback_theme() -> Theme {
-    use ratatui::style::Color;
-    let gray = Color::Rgb(160, 160, 170);
-    Theme {
-        name: "Fallback".to_owned(),
-        colors: super::theme::Colors {
-            background: Color::Rgb(20, 20, 26),
-            surface: Color::Rgb(30, 30, 38),
-            overlay: Color::Rgb(40, 40, 50),
-            text: Color::Rgb(220, 220, 228),
-            subtext: gray,
-            muted: Color::Rgb(100, 100, 112),
-            border: Color::Rgb(60, 60, 72),
-            accent: Color::Rgb(122, 162, 247),
-            accent_alt: Color::Rgb(187, 154, 247),
-            success: Color::Rgb(158, 206, 106),
-            warning: Color::Rgb(224, 175, 104),
-            danger: Color::Rgb(247, 118, 142),
-            download: Color::Rgb(125, 207, 255),
-            upload: Color::Rgb(187, 154, 247),
-            latency: Color::Rgb(158, 206, 106),
-        },
-    }
 }

@@ -1,0 +1,19 @@
+# netspd Light theme — clean, high-contrast, bright environment friendly.
+name = "Light"
+
+[colors]
+background = "#f5f5f5"
+surface    = "#ebebeb"
+overlay    = "#e0e0e0"
+text       = "#1a1a2e"
+subtext    = "#4a4a6a"
+muted      = "#8a8aaa"
+border     = "#c5c5d5"
+accent     = "#4361ee"
+accent_alt = "#7209b7"
+success    = "#2d6a4f"
+warning    = "#d4840a"
+danger     = "#d62828"
+download   = "#023e8a"
+upload     = "#7209b7"
+latency    = "#2d6a4f"

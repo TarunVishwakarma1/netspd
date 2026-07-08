@@ -11,4 +11,6 @@ pub mod renderer;
 pub mod screens;
 pub mod terminal;
 pub mod theme;
+pub mod theme_registry;
+pub mod wallpaper;
 pub mod widgets;

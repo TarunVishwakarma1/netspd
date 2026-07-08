@@ -8,26 +8,32 @@ use ratatui::Frame;
 
 use crate::engine::metrics::Sampler;
 use crate::tui::theme::Theme;
-use crate::utils::format::split_bps;
+use crate::utils::format::{split_bps_unit, SpeedUnit};
 
 use super::digits;
 
+/// Input data for the block-digit speed gauge.
+pub struct SpeedGaugeData<'a> {
+    /// Phase label, e.g. `"Download"`.
+    pub label: &'a str,
+    /// Current speed in bits per second.
+    pub bps: f64,
+    /// Accent color for the digits.
+    pub color: Color,
+    /// Recent speed samples for the sparkline.
+    pub history: &'a Sampler,
+    /// Whether to display in Mbps or MB/s.
+    pub speed_unit: SpeedUnit,
+}
+
 /// Renders the gauge: a phase label, the speed in large digits with its
 /// unit, and a sparkline of recent samples underneath.
-pub fn render(
-    frame: &mut Frame,
-    area: Rect,
-    theme: &Theme,
-    label: &str,
-    bps: f64,
-    color: Color,
-    history: &Sampler,
-) {
+pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, data: &SpeedGaugeData<'_>) {
     if area.height == 0 {
         return;
     }
     let colors = &theme.colors;
-    let (value, unit) = split_bps(bps);
+    let (value, unit) = split_bps_unit(data.bps, data.speed_unit);
 
     let [label_area, digits_area, spark_area] = Layout::vertical([
         Constraint::Length(1),
@@ -39,7 +45,7 @@ pub fn render(
     frame.render_widget(
         Paragraph::new(
             Line::from(Span::styled(
-                label.to_uppercase(),
+                data.label.to_uppercase(),
                 Style::default()
                     .fg(colors.subtext)
                     .add_modifier(Modifier::BOLD),
@@ -50,14 +56,14 @@ pub fn render(
     );
 
     if crate::tui::glyphs::current().fancy {
-        digits::render_value(frame, digits_area, &value, unit, color, colors.muted);
-        render_sparkline(frame, spark_area, history, color);
+        digits::render_value(frame, digits_area, &value, unit, data.color, colors.muted);
+        render_sparkline(frame, spark_area, data.history, data.color);
     } else {
         // ASCII mode: plain bold text, no block digits or sparkline.
         let line = Line::from(vec![
             Span::styled(
                 value,
-                Style::default().fg(color).add_modifier(Modifier::BOLD),
+                Style::default().fg(data.color).add_modifier(Modifier::BOLD),
             ),
             Span::styled(format!(" {unit}"), Style::default().fg(colors.muted)),
         ])
