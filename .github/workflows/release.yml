@@ -205,18 +205,6 @@ jobs:
           git commit -m "chore: packaging checksums for ${GITHUB_REF_NAME}"
           git push origin main
 
-  winget-submit:
-    name: submit to winget
-    needs: packaging
-    runs-on: windows-latest
-    steps:
-      - uses: vedantmgoyal9/winget-releaser@v2
-        with:
-          identifier: TarunVishwakarma1.netspd
-          version: ${{ github.ref_name }}
-          release-tag: ${{ github.ref_name }}
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
-
   homebrew:
     name: update homebrew tap
     needs: build

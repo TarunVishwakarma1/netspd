@@ -5,6 +5,7 @@
 //! tooling that is out of scope for the current build targets.
 
 use crate::engine::models::TestReport;
+#[cfg(unix)]
 use crate::utils::format::split_bps;
 
 /// Fires a desktop notification summarising the completed test.
@@ -40,6 +41,7 @@ fn fire_impl(_report: &TestReport, _provider: &str) {}
 
 // ── Shared helper ─────────────────────────────────────────────────────────────
 
+#[cfg(unix)]
 fn build_body(report: &TestReport, provider: &str) -> String {
     let (dl, dl_unit) = split_bps(report.download.average_bps);
     let (ul, ul_unit) = split_bps(report.upload.average_bps);
