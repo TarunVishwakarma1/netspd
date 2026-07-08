@@ -1,6 +1,6 @@
 # Maintainer: Tarun Vishwakarma <tarunvishwakarma81@gmail.com>
 pkgname=netspd
-pkgver=0.1.5
+pkgver=0.1.6
 pkgrel=1
 pkgdesc="Beautiful network speed test for the terminal, with a hypercar tachometer"
 arch=('x86_64' 'aarch64')

@@ -14,7 +14,7 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "netspd";
-          version = "0.1.5";
+          version = "0.1.6";
           src = self;
           cargoLock.lockFile = ./Cargo.lock;
           # Network-dependent behavior is not exercised in the sandbox.
