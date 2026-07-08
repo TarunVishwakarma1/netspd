@@ -1,13 +1,13 @@
 PackageIdentifier: TarunVishwakarma1.netspd
-PackageVersion: 0.1.5
+PackageVersion: 0.1.6
 InstallerType: zip
 NestedInstallerType: portable
 NestedInstallerFiles:
-  - RelativeFilePath: netspd-v0.1.5-x86_64-pc-windows-msvc\netspd.exe
+  - RelativeFilePath: netspd-v0.1.6-x86_64-pc-windows-msvc\netspd.exe
     PortableCommandAlias: netspd
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.5/netspd-v0.1.5-x86_64-pc-windows-msvc.zip
-    InstallerSha256: 46FAAA377A61EE3D615802EAC8306AF1D6623819766B9040465B0E8E0D23DC66
+    InstallerUrl: https://github.com/TarunVishwakarma1/netspd/releases/download/v0.1.6/netspd-v0.1.6-x86_64-pc-windows-msvc.zip
+    InstallerSha256: AFBC0DE6C36B9D03172676B7A120A054BF86F1458C7D45B4E1FBC4B36E107668
 ManifestType: installer
 ManifestVersion: 1.6.0
